@@ -1,13 +1,11 @@
 import {
   BaseEdge,
-  EdgeLabelRenderer,
   type EdgeProps,
   getSmoothStepPath,
 } from '@xyflow/react'
 
 import {
-  labelAboveMidSegment,
-  roundedOrthoPath,
+  softConnectorPath,
   snapEndpoints,
 } from '../edgePath'
 
@@ -47,10 +45,12 @@ export function ExecutionEdge({
 
   if (elkRaw && elkRaw.length >= 2) {
     const snapped = snapEndpoints(elkRaw, sourceX, sourceY, targetX, targetY)
-    path = roundedOrthoPath(snapped, 14)
-    const lift = labelAboveMidSegment(snapped, 26)
-    labelX = lift.x
-    labelY = lift.y
+    path = softConnectorPath(snapped, 0.2)
+    const midSeg = Math.floor((snapped.length - 1) / 2)
+    const a = snapped[midSeg]
+    const b = snapped[midSeg + 1]
+    labelX = (a.x + b.x) / 2
+    labelY = (a.y + b.y) / 2
   } else {
     path = smoothPath
     labelX = smoothLabelX
@@ -64,6 +64,7 @@ export function ExecutionEdge({
       <BaseEdge
         id={id}
         path={path}
+        className={active ? 'ff-edge-wire ff-edge-wire--active' : 'ff-edge-wire'}
         style={{
           stroke: active ? '#38bdf8' : 'rgba(148, 163, 184, 0.92)',
           strokeWidth: active ? 2.65 : 1.25,
@@ -74,38 +75,10 @@ export function ExecutionEdge({
           transition: 'stroke 160ms ease, stroke-width 160ms ease',
         }}
       />
-      {active ? (
-        <path
-          d={path}
-          fill="none"
-          stroke="#e0f2fe"
-          strokeWidth={2}
-          strokeDasharray="6 12"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          shapeRendering="geometricPrecision"
-          opacity={0.92}
-        >
-          <animate
-            attributeName="stroke-dashoffset"
-            from="0"
-            to="-72"
-            dur="1s"
-            repeatCount="indefinite"
-          />
-        </path>
-      ) : null}
       {edgeData?.label ? (
-        <EdgeLabelRenderer>
-          <div
-            className="ff-edge-label"
-            style={{
-              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            }}
-          >
-            {edgeData.label}
-          </div>
-        </EdgeLabelRenderer>
+        <text x={labelX} y={labelY} className="ff-edge-inline-label">
+          {edgeData.label}
+        </text>
       ) : null}
     </>
   )

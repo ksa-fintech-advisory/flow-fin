@@ -58,6 +58,30 @@ function simplifyOrthogonal(pts: ElkPoint[]): ElkPoint[] {
   return out
 }
 
+function nodeMidX(node: ElkNode | undefined): number {
+  if (!node) return 0
+  return (node.x ?? 0) + (node.width ?? ELK_FALLBACK_W) / 2
+}
+
+function countNodesBetweenX(
+  nodes: ElkNode[],
+  source: ElkNode | undefined,
+  target: ElkNode | undefined,
+): number {
+  if (!source || !target) return 0
+
+  const sourceX = nodeMidX(source)
+  const targetX = nodeMidX(target)
+  const minX = Math.min(sourceX, targetX)
+  const maxX = Math.max(sourceX, targetX)
+
+  return nodes.filter((node) => {
+    if (node.id === source.id || node.id === target.id) return false
+    const midX = nodeMidX(node)
+    return midX > minX && midX < maxX
+  }).length
+}
+
 /**
  * Layered + orthogonal: feedback routes for loops, multi-row wrapping so graphs
  * do not collapse into one rigid horizontal spine when width grows.
@@ -105,6 +129,35 @@ export async function layoutFlowWithElk(
 
   const layouted = await (await getElk()).layout(elkGraph)
   const children: ElkNode[] = layouted.children ?? []
+  const childById = new Map(children.map((c) => [c.id, c]))
+  const edgeById = new Map(edges.map((e) => [e.id, e]))
+
+  const detourEdgeIds = new Set<string>()
+  for (const edge of edges) {
+    const source = childById.get(edge.source)
+    const target = childById.get(edge.target)
+    const sourceMidX = nodeMidX(source)
+    const targetMidX = nodeMidX(target)
+    const isFeedback = sourceMidX > targetMidX
+    const crossesIntermediateNodes =
+      countNodesBetweenX(children, source, target) > 0
+
+    if (isFeedback || crossesIntermediateNodes) detourEdgeIds.add(edge.id)
+  }
+
+  const maxBottom = children.reduce(
+    (acc, node) => Math.max(acc, (node.y ?? 0) + (node.height ?? ELK_FALLBACK_H)),
+    0,
+  )
+  const detourLaneBaseY = maxBottom + 64
+  const detourLaneGap = 44
+  const detourLaneByEdgeId = new Map<string, number>()
+  let detourLaneCursor = 0
+  for (const edge of edges) {
+    if (!detourEdgeIds.has(edge.id)) continue
+    detourLaneByEdgeId.set(edge.id, detourLaneCursor)
+    detourLaneCursor += 1
+  }
 
   const positioned = nodes.map((node) => {
     const box = children.find((c) => c.id === node.id)
@@ -122,6 +175,36 @@ export async function layoutFlowWithElk(
     const ext = edge as ElkExtendedEdge
     if (!ext.id) continue
     let pts = dedupeConsecutive(collectSectionPoints(ext))
+
+    if (detourEdgeIds.has(ext.id) && pts.length >= 2) {
+      const spec = edgeById.get(ext.id)
+      const sourceNode = spec ? childById.get(spec.source) : undefined
+      const targetNode = spec ? childById.get(spec.target) : undefined
+      const lane = detourLaneByEdgeId.get(ext.id) ?? 0
+      const laneY = detourLaneBaseY + lane * detourLaneGap
+
+      const start = pts[0]
+      const end = pts[pts.length - 1]
+      const defaultOut = 42
+      const startOutX = Math.max(
+        start.x + defaultOut,
+        (sourceNode?.x ?? start.x) + (sourceNode?.width ?? 0) + 20,
+      )
+      const endInX = Math.min(
+        end.x - defaultOut,
+        (targetNode?.x ?? end.x) - 20,
+      )
+
+      pts = [
+        start,
+        { x: startOutX, y: start.y },
+        { x: startOutX, y: laneY },
+        { x: endInX, y: laneY },
+        { x: endInX, y: end.y },
+        end,
+      ]
+    }
+
     pts = simplifyOrthogonal(pts)
     if (pts.length < 2) continue
     edgeGeometry[ext.id] = { points: pts }

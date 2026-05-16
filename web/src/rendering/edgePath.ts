@@ -1,4 +1,4 @@
-/** Helpers for ELK polylines → rounded orthogonal SVG paths (Miro / Packet Tracer feel). */
+/** Helpers for ELK polylines → soft SVG connector paths (Miro / FigJam feel). */
 
 export type Point = { x: number; y: number }
 
@@ -15,6 +15,18 @@ function clampCornerRadius(
   const dIn = len(corner.x - prev.x, corner.y - prev.y)
   const dOut = len(next.x - corner.x, next.y - corner.y)
   return Math.min(radius, dIn / 2 - 0.5, dOut / 2 - 0.5)
+}
+
+function curveControlPoint(
+  prev: Point,
+  current: Point,
+  next: Point,
+  tension: number,
+): Point {
+  return {
+    x: current.x + (next.x - prev.x) * tension,
+    y: current.y + (next.y - prev.y) * tension,
+  }
 }
 
 /**
@@ -70,6 +82,44 @@ export function roundedOrthoPath(points: Point[], radius: number): string {
   return d
 }
 
+/**
+ * Smooth connector trace: preserves ELK waypoints for routing, but renders them
+ * as a continuous curve instead of rigid right-angle segments.
+ */
+export function softConnectorPath(points: Point[], tension = 0.18): string {
+  if (points.length < 2) return ''
+
+  const [first, second] = points
+  if (points.length === 2) {
+    const dx = second.x - first.x
+    const dy = second.y - first.y
+    const distance = Math.hypot(dx, dy)
+    const bow = Math.min(28, distance * 0.08)
+    const sameRow = Math.abs(dy) < 1
+
+    return [
+      `M ${first.x} ${first.y}`,
+      `C ${first.x + dx * 0.42} ${first.y + (sameRow ? bow : dy * 0.12)}`,
+      `${first.x + dx * 0.58} ${second.y - (sameRow ? bow : dy * 0.12)}`,
+      `${second.x} ${second.y}`,
+    ].join(' ')
+  }
+
+  let d = `M ${first.x} ${first.y}`
+  for (let i = 0; i < points.length - 1; i++) {
+    const prev = points[Math.max(0, i - 1)]
+    const current = points[i]
+    const next = points[i + 1]
+    const after = points[Math.min(points.length - 1, i + 2)]
+
+    const c1 = curveControlPoint(prev, current, next, tension)
+    const c2 = curveControlPoint(after, next, current, tension)
+    d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${next.x} ${next.y}`
+  }
+
+  return d
+}
+
 /** Match ELK polyline endpoints to React Flow handle positions (single continuous stroke). */
 export function snapEndpoints(
   points: Point[],
@@ -107,18 +157,3 @@ function simplifyOrthoWaypoints(pts: Point[]): Point[] {
   return out
 }
 
-/** Lift edge labels slightly off the wire so pills do not sit “inside” the stroke */
-export function labelAboveMidSegment(points: Point[], pxOffset: number): Point {
-  if (points.length < 2) return points[0]
-  const midSeg = Math.floor((points.length - 1) / 2)
-  const p0 = points[midSeg]
-  const p1 = points[midSeg + 1]
-  const dx = p1.x - p0.x
-  const dy = p1.y - p0.y
-  const L = Math.hypot(dx, dy) || 1
-  const nx = -dy / L
-  const ny = dx / L
-  const cx = (p0.x + p1.x) / 2
-  const cy = (p0.y + p1.y) / 2
-  return { x: cx + nx * pxOffset, y: cy + ny * pxOffset }
-}

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { SCENARIOS } from '../fdl/scenarios'
 import { useGraphStore } from '../stores/useGraphStore'
 import {
@@ -23,6 +24,7 @@ function phaseLabel(phase: SimulationPhase): string {
 }
 
 export function OrchestrationBar() {
+  const navigate = useNavigate()
   const flow = useGraphStore((s) => s.flow)
   const scenarioId = useGraphStore((s) => s.scenarioId)
   const setScenarioId = useGraphStore((s) => s.setScenarioId)
@@ -59,13 +61,24 @@ export function OrchestrationBar() {
   return (
     <header className="ff-orchestration">
       <div className="ff-orchestration__brand">
-        <span className="ff-orchestration__logo">FlowFin</span>
+        <div className="ff-orchestration__brand-top">
+          <Link to="/" className="ff-orchestration__logo">
+            FlowFin
+          </Link>
+          <Link to="/" className="ff-btn ff-btn--ghost ff-back-link">
+            ← Scenarios
+          </Link>
+        </div>
         <label className="ff-scenario-picker">
           <span className="visually-hidden">Scenario</span>
           <select
             className="ff-scenario-select"
             value={scenarioId}
-            onChange={(e) => setScenarioId(e.target.value)}
+            onChange={(e) => {
+              const id = e.target.value
+              setScenarioId(id)
+              navigate(`/playground/${id}`)
+            }}
             aria-label="Choose scenario"
           >
             {SCENARIOS.map((s) => (
