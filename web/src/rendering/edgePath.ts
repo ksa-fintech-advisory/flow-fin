@@ -1,107 +1,107 @@
 /**
- * Organic edge path helpers — Figma/Miro/Cisco Packet Tracer feel.
+ * Edge path helpers — clean rounded-corner orthogonal routing.
  *
  * Philosophy:
- *   - No hard 90° corners, no rigid orthogonal traces
- *   - Cubic bezier arcs that guide the eye naturally
- *   - Multi-waypoint paths use catmull-rom tension for smooth flow
- *   - Endpoints always snap to React Flow handles
+ *   - Right-angle paths with small rounded arcs at each bend
+ *   - Clean, structured feel like Figma / draw.io connectors
+ *   - Endpoints snap to React Flow handles
+ *   - Labels sit at the midpoint of the longest segment
  */
 
 export type Point = { x: number; y: number }
 
 // ─── Geometry primitives ─────────────────────────────────────────────────────
 
-function dist(a: Point, b: Point): number {
-  return Math.hypot(b.x - a.x, b.y - a.y)
-}
-
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t
 }
 
-function midpoint(a: Point, b: Point): Point {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
-}
-
-// ─── Direct connection (2 points) ────────────────────────────────────────────
+// ─── Rounded orthogonal path ─────────────────────────────────────────────────
 
 /**
- * Organic cubic bezier for a direct source→target connection.
- * Creates a natural bow arc — inspired by Figma connection handles and Miro.
- * The arc amplitude scales with distance and vertical offset to feel alive.
+ * Convert ELK orthogonal waypoints into a path with rounded corners.
+ * Each 90° bend is replaced by a quadratic arc with the given radius.
+ * Straight segments and 2-point paths get a simple horizontal-pull bezier.
  */
-export function organicDirectPath(source: Point, target: Point): string {
-  const dx = target.x - source.x
-  const dy = target.y - source.y
-  const d = Math.hypot(dx, dy)
-
-  // Horizontal pull: control points lean horizontally for a smooth departure
-  const pullX = Math.max(Math.abs(dx) * 0.42, Math.min(d * 0.35, 180))
-
-  // Vertical bow: subtle perpendicular lift for visual breathing
-  const vertBow = Math.abs(dy) < 8
-    ? Math.min(d * 0.06, 36)   // nearly straight: add gentle bow
-    : dy * 0.08                 // slanted: follow natural curve
-
-  const cx1 = source.x + pullX
-  const cy1 = source.y + vertBow
-
-  const cx2 = target.x - pullX
-  const cy2 = target.y - vertBow
-
-  return `M ${source.x} ${source.y} C ${cx1} ${cy1} ${cx2} ${cy2} ${target.x} ${target.y}`
-}
-
-// ─── Multi-waypoint spline (ELK polyline → organic curve) ────────────────────
-
-/**
- * Convert ELK waypoints into a smooth catmull-rom-style bezier spline.
- * Tension controls how tightly the curve follows the waypoints.
- * Higher tension = tighter corners; lower = more fluid arcs.
- */
-export function organicSplinePath(points: Point[], tension = 0.22): string {
+export function roundedOrthoPath(points: Point[], radius = 12): string {
   if (points.length < 2) return ''
 
+  // 2-point: simple horizontal bezier (clean departure from handles)
   if (points.length === 2) {
-    return organicDirectPath(points[0], points[1])
+    return directHorizontalPath(points[0], points[1])
   }
 
-  // Build smooth C commands through waypoints using Catmull-Rom → Cubic conversion
+  const r = radius
   let d = `M ${points[0].x} ${points[0].y}`
 
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[Math.max(0, i - 1)]
-    const p1 = points[i]
-    const p2 = points[i + 1]
-    const p3 = points[Math.min(points.length - 1, i + 2)]
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1]
+    const curr = points[i]
+    const next = points[i + 1]
 
-    // Catmull-Rom control point derivation
-    const cp1x = p1.x + (p2.x - p0.x) * tension
-    const cp1y = p1.y + (p2.y - p0.y) * tension
-    const cp2x = p2.x - (p3.x - p1.x) * tension
-    const cp2y = p2.y - (p3.y - p1.y) * tension
+    // Direction vectors
+    const dx1 = curr.x - prev.x
+    const dy1 = curr.y - prev.y
+    const dx2 = next.x - curr.x
+    const dy2 = next.y - curr.y
 
-    d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`
+    const len1 = Math.hypot(dx1, dy1)
+    const len2 = Math.hypot(dx2, dy2)
+
+    // Clamp radius to half the shorter segment
+    const maxR = Math.min(len1, len2) / 2
+    const cr = Math.min(r, maxR)
+
+    if (cr < 1) {
+      // Too small for rounding — sharp corner
+      d += ` L ${curr.x} ${curr.y}`
+      continue
+    }
+
+    // Points where the arc begins / ends (offset from corner by cr)
+    const arcStartX = curr.x - (dx1 / len1) * cr
+    const arcStartY = curr.y - (dy1 / len1) * cr
+    const arcEndX = curr.x + (dx2 / len2) * cr
+    const arcEndY = curr.y + (dy2 / len2) * cr
+
+    // Line to the arc start, then quadratic curve through the corner point
+    d += ` L ${arcStartX} ${arcStartY}`
+    d += ` Q ${curr.x} ${curr.y} ${arcEndX} ${arcEndY}`
   }
 
+  // Final line to last point
+  const last = points[points.length - 1]
+  d += ` L ${last.x} ${last.y}`
+
   return d
+}
+
+// ─── Direct connection (2 points, no ELK waypoints) ──────────────────────────
+
+/**
+ * Clean horizontal-pull bezier for direct source→target connections.
+ * Handles depart horizontally and meet the target cleanly.
+ */
+export function directHorizontalPath(source: Point, target: Point): string {
+  const dx = target.x - source.x
+  const pullX = Math.max(Math.abs(dx) * 0.35, 40)
+
+  const cx1 = source.x + pullX
+  const cy1 = source.y
+  const cx2 = target.x - pullX
+  const cy2 = target.y
+
+  return `M ${source.x} ${source.y} C ${cx1} ${cy1} ${cx2} ${cy2} ${target.x} ${target.y}`
 }
 
 // ─── Feedback / loop edge path ────────────────────────────────────────────────
 
 /**
- * Smooth bypass arc for feedback / long-range edges.
- * Routes below the node layer with gentle entry/exit curves.
- * Creates the "operational loop" topology feel.
+ * For feedback / backward edges that ELK routes through detour lanes.
+ * Uses the same rounded orthogonal rendering.
  */
 export function feedbackArcPath(points: Point[]): string {
-  if (points.length < 2) return ''
-  if (points.length === 2) return organicDirectPath(points[0], points[1])
-
-  // Use the spline path for ELK-routed feedback edges
-  // but with slightly looser tension so loops feel natural
-  return organicSplinePath(points, 0.28)
+  return roundedOrthoPath(points, 14)
 }
 
 // ─── Endpoint snapping ────────────────────────────────────────────────────────
@@ -131,71 +131,32 @@ export function snapEndpoints(
 // ─── Label anchor ─────────────────────────────────────────────────────────────
 
 /**
- * Compute a label position that sits semantically ON the edge curve.
- *
- * For 2-point paths: evaluates the cubic bezier at t=0.5 (true visual center)
- * then offsets by a small perpendicular amount for readability.
- *
- * For multi-point paths: picks the middle waypoint pair and samples the
- * midpoint with a perpendicular lift.
- *
- * `pxOffset` controls how far above/below the curve the label sits.
- * Use small values (6–10) to keep labels attached to the topology.
- *
- * Returns { x, y, angle } where angle (degrees) is the tangent at the
- * label point — can be used to rotate labels to follow the curve.
+ * Position a label at the midpoint of the longest segment in the path.
+ * This ensures labels sit on the most visually prominent section
+ * of the edge, with a small perpendicular offset for readability.
  */
 export function labelOnCurve(
   points: Point[],
-  pxOffset = 8,
+  pxOffset = 10,
 ): { x: number; y: number; angle: number } {
   if (points.length < 2) return { ...points[0], angle: 0 }
 
-  // ── 2-point: evaluate the actual bezier curve at t=0.5 ──────────────
-  if (points.length === 2) {
-    const [src, tgt] = points
-    const dx = tgt.x - src.x
-    const dy = tgt.y - src.y
-    const d = Math.hypot(dx, dy)
-
-    // Reconstruct the same control points organicDirectPath uses
-    const pullX = Math.max(Math.abs(dx) * 0.42, Math.min(d * 0.35, 180))
-    const vertBow = Math.abs(dy) < 8
-      ? Math.min(d * 0.06, 36)
-      : dy * 0.08
-
-    const cx1 = src.x + pullX
-    const cy1 = src.y + vertBow
-    const cx2 = tgt.x - pullX
-    const cy2 = tgt.y - vertBow
-
-    // Cubic bezier at t=0.5
-    const t = 0.5
-    const it = 1 - t
-    const midX = it*it*it*src.x + 3*it*it*t*cx1 + 3*it*t*t*cx2 + t*t*t*tgt.x
-    const midY = it*it*it*src.y + 3*it*it*t*cy1 + 3*it*t*t*cy2 + t*t*t*tgt.y
-
-    // Tangent at t=0.5 (first derivative of cubic bezier)
-    const tanX = 3*it*it*(cx1-src.x) + 6*it*t*(cx2-cx1) + 3*t*t*(tgt.x-cx2)
-    const tanY = 3*it*it*(cy1-src.y) + 6*it*t*(cy2-cy1) + 3*t*t*(tgt.y-cy2)
-    const tanLen = Math.hypot(tanX, tanY) || 1
-    const angle = Math.atan2(tanY, tanX) * (180 / Math.PI)
-
-    // Perpendicular offset (rotate tangent 90°)
-    const nx = -tanY / tanLen
-    const ny = tanX / tanLen
-
-    return {
-      x: midX + nx * pxOffset,
-      y: midY + ny * pxOffset,
-      angle,
+  // Find the longest segment — label goes there
+  let bestIdx = 0
+  let bestLen = 0
+  for (let i = 0; i < points.length - 1; i++) {
+    const len = Math.hypot(
+      points[i + 1].x - points[i].x,
+      points[i + 1].y - points[i].y,
+    )
+    if (len > bestLen) {
+      bestLen = len
+      bestIdx = i
     }
   }
 
-  // ── Multi-point: sample the middle segment ──────────────────────────
-  const midIdx = Math.floor((points.length - 1) / 2)
-  const p0 = points[midIdx]
-  const p1 = points[midIdx + 1]
+  const p0 = points[bestIdx]
+  const p1 = points[bestIdx + 1]
 
   const cx = lerp(p0.x, p1.x, 0.5)
   const cy = lerp(p0.y, p1.y, 0.5)
@@ -205,7 +166,7 @@ export function labelOnCurve(
   const L = Math.hypot(dx, dy) || 1
   const angle = Math.atan2(dy, dx) * (180 / Math.PI)
 
-  // Perpendicular offset (small — keeps label attached)
+  // Perpendicular offset
   const nx = -dy / L
   const ny = dx / L
 
@@ -217,24 +178,28 @@ export function labelOnCurve(
 }
 
 /**
- * @deprecated Use labelOnCurve instead — this shim preserves old call sites.
+ * @deprecated Use labelOnCurve instead.
  */
 export function labelAboveMidSegment(points: Point[], pxOffset: number): Point {
   const { x, y } = labelOnCurve(points, pxOffset)
   return { x, y }
 }
 
-// ─── Legacy compatibility shims ───────────────────────────────────────────────
-// These ensure any code that imported the old functions still compiles.
+// ─── Legacy shims ─────────────────────────────────────────────────────────────
 
-/** @deprecated Use organicSplinePath instead */
-export function softConnectorPath(points: Point[], tension = 0.22): string {
-  return organicSplinePath(points, tension)
+/** @deprecated Use roundedOrthoPath */
+export function organicSplinePath(points: Point[], _tension?: number): string {
+  return roundedOrthoPath(points, 12)
 }
 
-/** @deprecated Use organicDirectPath or organicSplinePath instead */
-export function roundedOrthoPath(points: Point[], _radius: number): string {
-  return organicSplinePath(points, 0.22)
+/** @deprecated Use directHorizontalPath */
+export function organicDirectPath(source: Point, target: Point): string {
+  return directHorizontalPath(source, target)
+}
+
+/** @deprecated Use roundedOrthoPath */
+export function softConnectorPath(points: Point[], _tension?: number): string {
+  return roundedOrthoPath(points, 12)
 }
 
 /** @deprecated */

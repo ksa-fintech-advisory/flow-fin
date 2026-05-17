@@ -5,10 +5,10 @@ import {
 } from '@xyflow/react'
 
 import {
+  directHorizontalPath,
   feedbackArcPath,
   labelOnCurve,
-  organicDirectPath,
-  organicSplinePath,
+  roundedOrthoPath,
   snapEndpoints,
 } from '../edgePath'
 
@@ -20,16 +20,15 @@ export type ExecutionEdgeData = {
 }
 
 /**
- * ExecutionEdge — cinematic operational topology connector.
+ * ExecutionEdge — clean operational topology connector.
  *
  * Visual hierarchy:
- *   idle       → dim slate wire, subtle presence
- *   highlighted → brightened, slight glow halo
- *   active     → electric blue, animated flow particles, soft radiance
+ *   idle       → dim slate wire
+ *   highlighted → brightened, slight glow
+ *   active     → electric blue, animated flow particles
  *
- * Label strategy:
- *   Labels sit ON the edge curve (not floating) with a tiny perpendicular
- *   offset for readability. They are embedded into the topology.
+ * Edge routing: rounded orthogonal corners (right-angle paths).
+ * Labels sit on the longest segment of the path.
  */
 export function ExecutionEdge({
   id,
@@ -50,18 +49,15 @@ export function ExecutionEdge({
 
   if (elkRaw && elkRaw.length >= 2) {
     const snapped = snapEndpoints(elkRaw, sourceX, sourceY, targetX, targetY)
-    // Detect feedback edges: source is to the right of target
     const isFeedback = snapped[0].x > snapped[snapped.length - 1].x + 40
     path = isFeedback
       ? feedbackArcPath(snapped)
-      : organicSplinePath(snapped, 0.22)
-    // Label sits ON the curve with minimal offset (topology-attached)
+      : roundedOrthoPath(snapped, 12)
     labelPos = labelOnCurve(snapped, 10)
   } else {
-    // Pure direct connection: organic horizontal-pull arc
     const src = { x: sourceX, y: sourceY }
     const tgt = { x: targetX, y: targetY }
-    path = organicDirectPath(src, tgt)
+    path = directHorizontalPath(src, tgt)
     labelPos = labelOnCurve([src, tgt], 10)
   }
 

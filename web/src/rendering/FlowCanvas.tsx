@@ -198,10 +198,10 @@ function FlowCanvasInner() {
         >
           <ElkFitView layoutVersion={layoutVersion} />
           <Background
-            variant={BackgroundVariant.Cross}
-            gap={28}
-            size={1.5}
-            color="rgba(51, 65, 85, 0.55)"
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1}
+            color="rgba(51, 65, 85, 0.45)"
           />
           <Controls
             showInteractive={false}

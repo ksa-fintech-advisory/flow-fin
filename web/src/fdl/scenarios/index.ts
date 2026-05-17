@@ -30,11 +30,11 @@ const S = 'n_start'
 const E = 'n_end'
 
 export const SCENARIOS: ScenarioMeta[] = [
-  /* ─── 1. Card Payment (from spec) ─── */
+  /* ─── 1. Card Payment (from spec — real bidirectional flow) ─── */
   {
     id: 'card-payment',
     title: 'Card payment',
-    subtitle: 'Full card payment flow: approved & declined paths',
+    subtitle: 'Full authorization: request forward → issuer decision → response back',
     flow: {
       id: 'card-payment',
       name: 'Card payment authorization',
@@ -46,14 +46,16 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'nacq', kind: 'settlement', label: 'Acquirer bank' },
         { id: 'nnet', kind: 'routing', label: 'Card network' },
         { id: 'niss', kind: 'fraud_check', label: 'Issuing bank' },
-        { id: E, kind: 'end', label: 'Customer result' },
+        { id: E, kind: 'end', label: 'Result' },
       ],
       edges: [
-        { id: 'e0', source: S, target: 'ngw' },
+        /* Forward request path */
+        { id: 'e0', source: S, target: 'ngw', label: 'card data' },
         { id: 'e1', source: 'ngw', target: 'nproc' },
         { id: 'e2', source: 'nproc', target: 'nacq' },
         { id: 'e3', source: 'nacq', target: 'nnet' },
         { id: 'e4', source: 'nnet', target: 'niss' },
+        /* Backward response path */
         { id: 'e5', source: 'niss', target: 'nnet', label: 'response' },
         { id: 'e6', source: 'nnet', target: 'nacq', label: 'relay' },
         { id: 'e7', source: 'nacq', target: 'nproc', label: 'relay' },

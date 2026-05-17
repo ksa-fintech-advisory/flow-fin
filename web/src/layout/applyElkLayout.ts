@@ -2,7 +2,7 @@ import type { ElkExtendedEdge, ElkNode, ElkPoint } from 'elkjs'
 import type { Edge, Node } from '@xyflow/react'
 
 export type ElkEdgeGeometry = {
-  /** Orthogonal polyline in flow space (endpoints aligned by ExecutionEdge to handles). */
+  /** Polyline in flow space (endpoints aligned by ExecutionEdge to handles). */
   points: ElkPoint[]
 }
 
@@ -69,12 +69,10 @@ function countNodesBetweenX(
   target: ElkNode | undefined,
 ): number {
   if (!source || !target) return 0
-
   const sourceX = nodeMidX(source)
   const targetX = nodeMidX(target)
   const minX = Math.min(sourceX, targetX)
   const maxX = Math.max(sourceX, targetX)
-
   return nodes.filter((node) => {
     if (node.id === source.id || node.id === target.id) return false
     const midX = nodeMidX(node)
@@ -83,28 +81,32 @@ function countNodesBetweenX(
 }
 
 /**
- * Layered + spline routing: cinematic operational topology feel.
- * Inspired by Cisco Packet Tracer, Miro topology maps, observability graphs.
- * SPLINES routing + BRANDES_KOEPF placement = organic spatial distribution.
+ * Layered + orthogonal: clean topology-system layout.
+ *
+ * Design decisions:
+ *   - ORTHOGONAL routing: predictable right-angle paths that get softened
+ *     into curves at render time (roundedOrthoPath / organicSplinePath)
+ *   - NETWORK_SIMPLEX placement: balanced vertical distribution
+ *   - Generous spacing: topology breathing room without excess
+ *   - feedbackEdges: loops route cleanly below the graph
  */
 const LAYOUT_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
-  /* Cinematic breathing room — topology systems (not workflow editors) */
-  'elk.spacing.nodeNode': '148',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '280',
-  'elk.layered.spacing.edgeNodeBetweenLayers': '96',
-  /* SPLINES: curves naturally around topology — Figma / Miro feel */
-  'org.eclipse.elk.edgeRouting': 'SPLINES',
+  /* Balanced breathing room — topology, not workflow editor */
+  'elk.spacing.nodeNode': '80',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '180',
+  'elk.layered.spacing.edgeNodeBetweenLayers': '60',
+  /* ORTHOGONAL: clean structured routes, softened in rendering */
+  'org.eclipse.elk.edgeRouting': 'ORTHOGONAL',
   'org.eclipse.elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-  /* BRANDES_KOEPF gives natural vertical spread — breaks grid alignment */
-  'org.eclipse.elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
-  'org.eclipse.elk.layered.nodePlacement.favorStraightEdges': 'false',
-  'org.eclipse.elk.layered.nodePlacement.bk.fixedAlignment': 'NONE',
-  /* Generous edge separation for visual clarity */
-  'org.eclipse.elk.spacing.edgeEdge': '96',
-  'org.eclipse.elk.spacing.edgeNode': '56',
-  'org.eclipse.elk.padding': '80',
+  /* NETWORK_SIMPLEX: balanced vertical placement */
+  'org.eclipse.elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+  'org.eclipse.elk.layered.nodePlacement.favorStraightEdges': 'true',
+  /* Edge separation */
+  'org.eclipse.elk.spacing.edgeEdge': '40',
+  'org.eclipse.elk.spacing.edgeNode': '36',
+  'org.eclipse.elk.padding': '48',
   'org.eclipse.elk.layered.feedbackEdges': 'true',
   'org.eclipse.elk.layered.mergeEdges': 'false',
   'org.eclipse.elk.layered.wrapping.strategy': 'OFF',
@@ -144,7 +146,6 @@ export async function layoutFlowWithElk(
     const isFeedback = sourceMidX > targetMidX
     const crossesIntermediateNodes =
       countNodesBetweenX(children, source, target) > 0
-
     if (isFeedback || crossesIntermediateNodes) detourEdgeIds.add(edge.id)
   }
 
@@ -162,33 +163,13 @@ export async function layoutFlowWithElk(
     detourLaneCursor += 1
   }
 
-  // Collect layer X boundaries for per-layer jitter
-  // Group nodes by their approximate X layer to add subtle Y stagger
-  const layerMap = new Map<number, string[]>()
-  for (const child of children) {
-    const layerKey = Math.round((child.x ?? 0) / 60) // bucket by ~60px
-    const bucket = layerMap.get(layerKey) ?? []
-    bucket.push(child.id)
-    layerMap.set(layerKey, bucket)
-  }
-  // Assign a subtle but intentional Y jitter offset per layer-slot
-  const jitterById = new Map<string, number>()
-  for (const [, ids] of layerMap) {
-    ids.forEach((id, slotIdx) => {
-      // Organic stagger: alternate above/below centerline slightly
-      const direction = slotIdx % 2 === 0 ? 1 : -1
-      jitterById.set(id, direction * slotIdx * 14)
-    })
-  }
-
   const positioned = nodes.map((node) => {
     const box = children.find((c) => c.id === node.id)
-    const jitter = jitterById.get(node.id) ?? 0
     return {
       ...node,
       position: {
         x: box?.x ?? 0,
-        y: (box?.y ?? 0) + jitter,
+        y: box?.y ?? 0,
       },
     }
   })
