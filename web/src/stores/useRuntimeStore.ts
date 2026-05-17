@@ -37,6 +37,11 @@ interface RuntimeStore {
    * during decline propagation.
    */
   nodeFailureMessages: Record<string, string>
+  /**
+   * Active edge payload labels. Shows the "packet" data traveling along
+   * each active edge during simulation, like Packet Tracer.
+   */
+  activeEdgePayloads: Record<string, string>
   timeline: TimelineEntry[]
   /** Currently selected simulation case id */
   activeCaseId: string | null
@@ -108,7 +113,7 @@ function timelineCopyForKind(
 
 const INITIAL_RUNTIME: Pick<
   RuntimeStore,
-  'phase' | 'cursor' | 'nodeStates' | 'activeEdgeIds' | 'failedEdgeIds' | 'failureReason' | 'nodeFailureMessages' | 'timeline'
+  'phase' | 'cursor' | 'nodeStates' | 'activeEdgeIds' | 'failedEdgeIds' | 'failureReason' | 'nodeFailureMessages' | 'activeEdgePayloads' | 'timeline'
 > = {
   phase: 'idle',
   cursor: -1,
@@ -117,6 +122,7 @@ const INITIAL_RUNTIME: Pick<
   failedEdgeIds: [],
   failureReason: null,
   nodeFailureMessages: {},
+  activeEdgePayloads: {},
   timeline: [],
 }
 
