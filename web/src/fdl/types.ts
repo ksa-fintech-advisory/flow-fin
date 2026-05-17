@@ -42,6 +42,17 @@ export interface SimulationCase {
   sequence: string[]
   /** Final state for each node at end of this case ('success' | 'failed') */
   terminalStates?: Record<string, RuntimeNodeState>
+  /**
+   * Short failure reason shown on the originating failed node
+   * and carried on response edge labels during decline propagation.
+   * e.g. "Insufficient balance"
+   */
+  failureReason?: string
+  /**
+   * Per-node messages displayed during decline propagation.
+   * Nodes not listed fall back to "Relaying: <failureReason>".
+   */
+  failureMessages?: Record<string, string>
 }
 
 export interface SimulationConfig {

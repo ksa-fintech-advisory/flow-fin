@@ -22,8 +22,21 @@ interface RuntimeStore {
   cursor: number
   nodeStates: Record<string, RuntimeNodeState>
   activeEdgeIds: string[]
-  /** Edge IDs that are currently carrying failure/decline signals */
+  /**
+   * Cumulative set of edge IDs that have carried failure/decline signals.
+   * Edges stay in this list after traversal so they remain visually red.
+   */
   failedEdgeIds: string[]
+  /**
+   * The active failure reason (set when a node fails).
+   * Carried on edge labels during decline propagation.
+   */
+  failureReason: string | null
+  /**
+   * Per-node failure messages. Shown on the node and in the timeline
+   * during decline propagation.
+   */
+  nodeFailureMessages: Record<string, string>
   timeline: TimelineEntry[]
   /** Currently selected simulation case id */
   activeCaseId: string | null
@@ -68,13 +81,14 @@ function timelineCopyForKind(
   kind: FDLNodeKind,
   label: string,
   isFailed?: boolean,
+  failureMessage?: string,
 ): { title: string; detail?: string } {
   if (isFailed) {
     switch (kind) {
-      case 'fraud_check': return { title: 'Check declined', detail: `${label} flagged or blocked` }
-      case 'payment': return { title: 'Payment declined', detail: `${label} rejected` }
-      case 'end': return { title: 'Flow ended — declined', detail: label }
-      default: return { title: 'Step failed', detail: label }
+      case 'fraud_check': return { title: 'Check declined', detail: failureMessage ?? `${label} flagged or blocked` }
+      case 'payment': return { title: 'Payment declined', detail: failureMessage ?? `${label} rejected` }
+      case 'end': return { title: 'Flow ended — declined', detail: failureMessage ?? label }
+      default: return { title: 'Step failed', detail: failureMessage ?? label }
     }
   }
   switch (kind) {
@@ -92,13 +106,22 @@ function timelineCopyForKind(
   }
 }
 
-export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
+const INITIAL_RUNTIME: Pick<
+  RuntimeStore,
+  'phase' | 'cursor' | 'nodeStates' | 'activeEdgeIds' | 'failedEdgeIds' | 'failureReason' | 'nodeFailureMessages' | 'timeline'
+> = {
   phase: 'idle',
   cursor: -1,
   nodeStates: {},
   activeEdgeIds: [],
   failedEdgeIds: [],
+  failureReason: null,
+  nodeFailureMessages: {},
   timeline: [],
+}
+
+export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
+  ...INITIAL_RUNTIME,
   activeCaseId: null,
 
   selectCase: (caseId) => {
@@ -120,7 +143,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     if (flow) {
       for (const n of flow.nodes) nodeStates[n.id] = 'idle'
     }
-    set({ phase: 'idle', cursor: -1, nodeStates, activeEdgeIds: [], failedEdgeIds: [], timeline: [] })
+    set({ ...INITIAL_RUNTIME, nodeStates })
   },
 
   start: () => {
@@ -167,8 +190,10 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
 
     const simCase = getActiveCase(flow, state.activeCaseId)
     const terminalStates = simCase?.terminalStates ?? {}
+    const caseFailureReason = simCase?.failureReason ?? null
+    const caseFailureMessages = simCase?.failureMessages ?? {}
 
-    let { cursor, nodeStates, timeline } = state
+    let { cursor, nodeStates, timeline, failedEdgeIds, failureReason, nodeFailureMessages } = state
     const now = Date.now()
 
     // Mark previous step done
@@ -176,19 +201,42 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       const completedId = seq[cursor]
       const finalState = terminalStates[completedId] ?? 'success'
       nodeStates = { ...nodeStates, [completedId]: finalState }
-      const node = flow.nodes.find((n) => n.id === completedId)
+
       const isFailed = finalState === 'failed'
+      const node = flow.nodes.find((n) => n.id === completedId)
+
+      // When a node fails, activate the failure reason and messages
+      if (isFailed && caseFailureReason) {
+        failureReason = caseFailureReason
+        nodeFailureMessages = { ...nodeFailureMessages, ...caseFailureMessages }
+      }
+
+      // If we're in failure propagation and this node has a failure message, record it
+      const nodeMsg = failureReason ? caseFailureMessages[completedId] : undefined
+
       const msg = node
-        ? timelineCopyForKind(node.kind, node.label ?? node.id, isFailed)
+        ? timelineCopyForKind(
+            node.kind,
+            node.label ?? node.id,
+            isFailed,
+            isFailed ? nodeMsg : undefined,
+          )
         : { title: 'Step complete' }
+
+      // If this node is relaying a failure (not the origin), use a special timeline entry
+      const isRelaying = !isFailed && failureReason && nodeMsg
+      const tone: TimelineEntry['tone'] = isFailed ? 'error' : isRelaying ? 'warn' : 'success'
+      const title = isRelaying ? `Relaying decline` : msg.title
+      const detail = isRelaying ? nodeMsg : msg.detail
+
       timeline = [
         ...timeline,
         {
           id: `${now}-done-${completedId}`,
           at: now,
-          title: msg.title,
-          detail: msg.detail,
-          tone: isFailed ? 'error' : 'success',
+          title,
+          detail,
+          tone,
           nodeId: completedId,
         },
       ]
@@ -199,18 +247,23 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     // End of sequence
     if (cursor >= seq.length) {
       const hasFailures = Object.keys(terminalStates).length > 0
+      const endDetail = hasFailures
+        ? `End-to-end simulation finished — ${failureReason ?? 'decline path'}`
+        : 'End-to-end simulation finished'
       set({
         cursor,
         nodeStates,
         activeEdgeIds: [],
-        failedEdgeIds: [],
+        failedEdgeIds, // preserve — keep all red edges visible
+        failureReason,
+        nodeFailureMessages,
         timeline: [
           ...timeline,
           {
             id: `${now}-done-flow`,
             at: Date.now(),
             title: hasFailures ? 'Simulation completed — declined' : 'Settlement completed',
-            detail: hasFailures ? 'End-to-end simulation finished (decline path)' : 'End-to-end simulation finished',
+            detail: endDetail,
             tone: hasFailures ? 'error' : 'success',
           },
         ],
@@ -225,29 +278,44 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       [nextId]: 'running',
     }
     let activeEdgeIds: string[] = []
-    let failedEdgeIds: string[] = []
+    let newFailedEdgeIds = [...failedEdgeIds] // cumulative — keep previous
     if (cursor > 0) {
       const prevId = seq[cursor - 1]
       const eid = edgeBetween(flow, prevId, nextId)
       if (eid) {
         activeEdgeIds = [eid]
-        // Sticky failure propagation: once any node in the sequence has
-        // been marked 'failed', all subsequent edges carry the failure signal.
-        // This creates a continuous red decline path from the origin of failure
-        // through all relay nodes back to the end.
+        // Sticky failure propagation: once any node has been marked 'failed',
+        // all subsequent edges accumulate in failedEdgeIds and stay red.
         const anyPriorFailed = seq.slice(0, cursor).some(
           (nid) => nodeStates[nid] === 'failed',
         )
-        if (anyPriorFailed) {
-          failedEdgeIds = [eid]
+        if (anyPriorFailed && !newFailedEdgeIds.includes(eid)) {
+          newFailedEdgeIds = [...newFailedEdgeIds, eid]
         }
       }
     }
 
     const node = flow.nodes.find((n) => n.id === nextId)
+
+    // If we're in failure propagation, use the failure message for the entering node
+    const isInFailurePropagation = failureReason !== null
+    const enterMsg = isInFailurePropagation && caseFailureMessages[nextId]
+      ? caseFailureMessages[nextId]
+      : undefined
+
     const runCopy = node
       ? timelineCopyForKind(node.kind, node.label ?? node.id)
       : { title: 'Executing step' }
+
+    const enterTitle = isInFailurePropagation
+      ? `Propagating: ${failureReason}`
+      : `Entering: ${runCopy.title}`
+    const enterDetail = enterMsg
+      ? enterMsg
+      : node
+        ? `${node.kind} · ${node.label ?? node.id}`
+        : undefined
+    const enterTone: TimelineEntry['tone'] = isInFailurePropagation ? 'error' : 'neutral'
 
     const appended: TimelineEntry[] =
       cursor === 0
@@ -262,9 +330,9 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
             {
               id: `${now}-enter-${nextId}`,
               at: now + 1,
-              title: `Entering: ${runCopy.title}`,
-              detail: node ? `${node.kind} · ${node.label ?? node.id}` : undefined,
-              tone: 'neutral',
+              title: enterTitle,
+              detail: enterDetail,
+              tone: enterTone,
               nodeId: nextId,
             },
           ]
@@ -272,9 +340,9 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
             {
               id: `${now}-enter-${nextId}`,
               at: now,
-              title: `Entering: ${runCopy.title}`,
-              detail: node ? `${node.kind} · ${node.label ?? node.id}` : undefined,
-              tone: 'neutral',
+              title: enterTitle,
+              detail: enterDetail,
+              tone: enterTone,
               nodeId: nextId,
             },
           ]
@@ -283,7 +351,9 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       cursor,
       nodeStates: nextStates,
       activeEdgeIds,
-      failedEdgeIds,
+      failedEdgeIds: newFailedEdgeIds,
+      failureReason,
+      nodeFailureMessages,
       timeline: [...timeline, ...appended],
     })
   },

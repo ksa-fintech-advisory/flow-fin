@@ -50,6 +50,8 @@ function FlowCanvasInner() {
   const nodeStates = useRuntimeStore((s) => s.nodeStates)
   const activeEdgeIds = useRuntimeStore((s) => s.activeEdgeIds)
   const failedEdgeIds = useRuntimeStore((s) => s.failedEdgeIds)
+  const failureReason = useRuntimeStore((s) => s.failureReason)
+  const nodeFailureMessages = useRuntimeStore((s) => s.nodeFailureMessages)
   const bindFlow = useRuntimeStore((s) => s.bindFlow)
 
   const [elkNodes, setElkNodes] = useState<Node[] | null>(null)
@@ -124,6 +126,9 @@ function FlowCanvasInner() {
     return elkNodes.map((node) => {
       const fn = flow.nodes.find((n) => n.id === node.id)!
       const { width, height } = elkBBoxForKind(fn.kind, fn.label ?? fn.id)
+      const runtimeState = nodeStates[node.id] ?? 'idle'
+      // If node has a failure message, pass it for display
+      const failureMessage = nodeFailureMessages[node.id] ?? null
       return {
         ...node,
         type: fn.kind,
@@ -133,11 +138,14 @@ function FlowCanvasInner() {
         data: {
           kind: fn.kind,
           label: fn.label ?? fn.id,
-          runtimeState: nodeStates[node.id] ?? 'idle',
+          runtimeState,
+          failureMessage: runtimeState === 'failed' || (failureReason && runtimeState === 'success')
+            ? failureMessage
+            : null,
         },
       }
     })
-  }, [elkNodes, flow.nodes, nodeStates, selectedNodeId])
+  }, [elkNodes, flow.nodes, nodeStates, selectedNodeId, failureReason, nodeFailureMessages])
 
   const edges: Edge[] = useMemo(
     () =>
@@ -145,22 +153,28 @@ function FlowCanvasInner() {
         const touchesSelection =
           selectedNodeId != null &&
           (e.source === selectedNodeId || e.target === selectedNodeId)
+        const isFailed = failedEdgeIds.includes(e.id)
+        // Override edge label during failure propagation:
+        // show the decline reason on failed response edges
+        const edgeLabel = isFailed && failureReason
+          ? `decline: ${failureReason.toLowerCase()}`
+          : e.label
         return {
           id: e.id,
           source: e.source,
           target: e.target,
           type: 'execution',
           data: {
-            label: e.label,
+            label: edgeLabel,
             active: activeEdgeIds.includes(e.id),
-            failed: failedEdgeIds.includes(e.id),
+            failed: isFailed,
             highlighted: touchesSelection,
             elkPoints: edgeGeometry[e.id]?.points,
             direction: backwardIds.has(e.id) ? 'response' as const : 'forward' as const,
           },
         }
       }),
-    [flow.edges, activeEdgeIds, failedEdgeIds, edgeGeometry, selectedNodeId, backwardIds],
+    [flow.edges, activeEdgeIds, failedEdgeIds, failureReason, edgeGeometry, selectedNodeId, backwardIds],
   )
 
   const onPaneClick = useCallback(() => {

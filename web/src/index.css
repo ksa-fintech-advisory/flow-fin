@@ -764,6 +764,29 @@ body {
   padding: 0 12px 10px 14px;
 }
 
+/* Failure / decline message shown on node during propagation */
+.ff-node__failure-msg {
+  margin-top: 6px;
+  padding: 3px 0;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #fca5a5;
+  font-style: italic;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.ff-node__failure-msg--compact {
+  font-size: 9px;
+  margin-top: 3px;
+  max-width: 80px;
+  text-align: center;
+}
+
 .ff-status-pill {
   display: inline-flex;
   align-items: center;

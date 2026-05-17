@@ -9,6 +9,8 @@ export type FinancialNodeData = {
   kind: FDLNodeKind
   label: string
   runtimeState: RuntimeNodeState
+  /** Contextual failure/decline message for this node */
+  failureMessage?: string | null
 }
 
 function statusLabel(state: RuntimeNodeState): string {
@@ -16,7 +18,7 @@ function statusLabel(state: RuntimeNodeState): string {
 }
 
 export function FinancialNode({ id, data, selected }: NodeProps) {
-  const { kind, label, runtimeState } = data as FinancialNodeData
+  const { kind, label, runtimeState, failureMessage } = data as FinancialNodeData
   const visual = NODE_VISUALS[kind]
   const storeSelected = useUiStore((s) => s.selectedNodeId === id)
   const isSelected = selected || storeSelected
@@ -71,6 +73,9 @@ export function FinancialNode({ id, data, selected }: NodeProps) {
             <NodeKindIcon kind={kind} />
             <div className="ff-node__label">{label}</div>
             {statusPill}
+            {failureMessage ? (
+              <div className="ff-node__failure-msg ff-node__failure-msg--compact">{failureMessage}</div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -96,7 +101,12 @@ export function FinancialNode({ id, data, selected }: NodeProps) {
         <div className="ff-node__body">
           <div className="ff-node__label">{label}</div>
         </div>
-        <footer className="ff-node__footer">{statusPill}</footer>
+        <footer className="ff-node__footer">
+          {statusPill}
+          {failureMessage ? (
+            <div className="ff-node__failure-msg">{failureMessage}</div>
+          ) : null}
+        </footer>
       </div>
     )
   }
