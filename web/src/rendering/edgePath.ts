@@ -6,6 +6,7 @@
  *   - Clean, structured feel like Figma / draw.io connectors
  *   - Endpoints snap to React Flow handles
  *   - Labels sit at the midpoint of the longest segment
+ *   - Intelligent curvature adapts to edge density
  */
 
 export type Point = { x: number; y: number }
@@ -23,7 +24,7 @@ function lerp(a: number, b: number, t: number): number {
  * Each 90° bend is replaced by a quadratic arc with the given radius.
  * Straight segments and 2-point paths get a simple horizontal-pull bezier.
  */
-export function roundedOrthoPath(points: Point[], radius = 12): string {
+export function roundedOrthoPath(points: Point[], radius = 14): string {
   if (points.length < 2) return ''
 
   // 2-point: simple horizontal bezier (clean departure from handles)
@@ -84,7 +85,9 @@ export function roundedOrthoPath(points: Point[], radius = 12): string {
  */
 export function directHorizontalPath(source: Point, target: Point): string {
   const dx = target.x - source.x
-  const pullX = Math.max(Math.abs(dx) * 0.35, 40)
+  const dy = Math.abs(target.y - source.y)
+  // Scale pull strength based on distance — longer edges get more pull
+  const pullX = Math.max(Math.abs(dx) * 0.38, Math.min(dy * 0.6, 120), 50)
 
   const cx1 = source.x + pullX
   const cy1 = source.y
@@ -98,10 +101,10 @@ export function directHorizontalPath(source: Point, target: Point): string {
 
 /**
  * For feedback / backward edges that ELK routes through detour lanes.
- * Uses the same rounded orthogonal rendering.
+ * Uses slightly larger rounding radius for cleaner loops.
  */
 export function feedbackArcPath(points: Point[]): string {
-  return roundedOrthoPath(points, 14)
+  return roundedOrthoPath(points, 16)
 }
 
 // ─── Endpoint snapping ────────────────────────────────────────────────────────
@@ -189,7 +192,7 @@ export function labelAboveMidSegment(points: Point[], pxOffset: number): Point {
 
 /** @deprecated Use roundedOrthoPath */
 export function organicSplinePath(points: Point[], _tension?: number): string {
-  return roundedOrthoPath(points, 12)
+  return roundedOrthoPath(points, 14)
 }
 
 /** @deprecated Use directHorizontalPath */
@@ -199,7 +202,7 @@ export function organicDirectPath(source: Point, target: Point): string {
 
 /** @deprecated Use roundedOrthoPath */
 export function softConnectorPath(points: Point[], _tension?: number): string {
-  return roundedOrthoPath(points, 12)
+  return roundedOrthoPath(points, 14)
 }
 
 /** @deprecated */

@@ -22,6 +22,8 @@ interface RuntimeStore {
   cursor: number
   nodeStates: Record<string, RuntimeNodeState>
   activeEdgeIds: string[]
+  /** Edge IDs that are currently carrying failure/decline signals */
+  failedEdgeIds: string[]
   timeline: TimelineEntry[]
   /** Currently selected simulation case id */
   activeCaseId: string | null
@@ -95,6 +97,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
   cursor: -1,
   nodeStates: {},
   activeEdgeIds: [],
+  failedEdgeIds: [],
   timeline: [],
   activeCaseId: null,
 
@@ -117,7 +120,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     if (flow) {
       for (const n of flow.nodes) nodeStates[n.id] = 'idle'
     }
-    set({ phase: 'idle', cursor: -1, nodeStates, activeEdgeIds: [], timeline: [] })
+    set({ phase: 'idle', cursor: -1, nodeStates, activeEdgeIds: [], failedEdgeIds: [], timeline: [] })
   },
 
   start: () => {
@@ -200,6 +203,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         cursor,
         nodeStates,
         activeEdgeIds: [],
+        failedEdgeIds: [],
         timeline: [
           ...timeline,
           {
@@ -221,10 +225,23 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       [nextId]: 'running',
     }
     let activeEdgeIds: string[] = []
+    let failedEdgeIds: string[] = []
     if (cursor > 0) {
       const prevId = seq[cursor - 1]
       const eid = edgeBetween(flow, prevId, nextId)
-      if (eid) activeEdgeIds = [eid]
+      if (eid) {
+        activeEdgeIds = [eid]
+        // Sticky failure propagation: once any node in the sequence has
+        // been marked 'failed', all subsequent edges carry the failure signal.
+        // This creates a continuous red decline path from the origin of failure
+        // through all relay nodes back to the end.
+        const anyPriorFailed = seq.slice(0, cursor).some(
+          (nid) => nodeStates[nid] === 'failed',
+        )
+        if (anyPriorFailed) {
+          failedEdgeIds = [eid]
+        }
+      }
     }
 
     const node = flow.nodes.find((n) => n.id === nextId)
@@ -266,6 +283,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       cursor,
       nodeStates: nextStates,
       activeEdgeIds,
+      failedEdgeIds,
       timeline: [...timeline, ...appended],
     })
   },

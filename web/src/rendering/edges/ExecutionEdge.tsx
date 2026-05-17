@@ -12,23 +12,32 @@ import {
   snapEndpoints,
 } from '../edgePath'
 
+export type EdgeDirection = 'forward' | 'response'
+
 export type ExecutionEdgeData = {
   label?: string
   active?: boolean
+  /** This edge is carrying a failure/decline signal */
+  failed?: boolean
   highlighted?: boolean
   elkPoints?: { x: number; y: number }[]
+  /** Flow direction: 'forward' (request path) or 'response' (backward/return path) */
+  direction?: EdgeDirection
 }
 
 /**
  * ExecutionEdge — clean operational topology connector.
  *
  * Visual hierarchy:
- *   idle       → dim slate wire
+ *   idle       → dim slate wire (forward) or tinted amber (response)
  *   highlighted → brightened, slight glow
  *   active     → electric blue, animated flow particles
+ *   failed     → red, animated flow particles (decline propagation)
  *
- * Edge routing: rounded orthogonal corners (right-angle paths).
- * Labels sit on the longest segment of the path.
+ * Direction-aware coloring:
+ *   forward  edges → slate/blue tones (request path)
+ *   response edges → warm amber tones (return path)
+ *   This lets users visually trace request vs response before simulation.
  */
 export function ExecutionEdge({
   id,
@@ -40,6 +49,7 @@ export function ExecutionEdge({
   data,
 }: EdgeProps) {
   const edgeData = data as ExecutionEdgeData | undefined
+  const direction: EdgeDirection = edgeData?.direction ?? 'forward'
 
   const elkRaw = edgeData?.elkPoints
 
@@ -52,7 +62,7 @@ export function ExecutionEdge({
     const isFeedback = snapped[0].x > snapped[snapped.length - 1].x + 40
     path = isFeedback
       ? feedbackArcPath(snapped)
-      : roundedOrthoPath(snapped, 12)
+      : roundedOrthoPath(snapped, 14)
     labelPos = labelOnCurve(snapped, 10)
   } else {
     const src = { x: sourceX, y: sourceY }
@@ -62,7 +72,9 @@ export function ExecutionEdge({
   }
 
   const active = Boolean(edgeData?.active)
+  const failed = Boolean(edgeData?.failed)
   const highlighted = Boolean(edgeData?.highlighted) || Boolean(selected)
+  const isResponse = direction === 'response'
 
   const markerId = `ff-arrow-${id}`
   const glowId = `ff-glow-${id}`
@@ -71,27 +83,61 @@ export function ExecutionEdge({
   const wireClass = [
     'ff-edge-wire',
     active ? 'ff-edge-wire--active' : '',
+    failed ? 'ff-edge-wire--failed' : '',
     highlighted ? 'ff-edge-wire--highlight' : '',
+    isResponse ? 'ff-edge-wire--response' : '',
   ]
     .filter(Boolean)
     .join(' ')
 
-  // Color tokens
-  const baseColor = 'rgba(100, 116, 139, 0.7)'
-  const highlightColor = 'rgba(148, 163, 184, 0.95)'
+  // ── Direction-aware color tokens ─────────────────────────────────────────
+  const forwardBase = 'rgba(100, 116, 139, 0.7)'
+  const forwardHighlight = 'rgba(148, 163, 184, 0.95)'
+  const responseBase = 'rgba(196, 167, 125, 0.65)'
+  const responseHighlight = 'rgba(217, 189, 149, 0.92)'
   const activeColor = '#38bdf8'
-  const strokeColor = active ? activeColor : highlighted ? highlightColor : baseColor
+  const failedColor = '#f87171'   // red-400
+
+  const baseColor = isResponse ? responseBase : forwardBase
+  const highlightColor = isResponse ? responseHighlight : forwardHighlight
+
+  // Failed overrides active color
+  const resolvedActiveColor = failed ? failedColor : activeColor
+  const strokeColor = active
+    ? resolvedActiveColor
+    : highlighted
+      ? highlightColor
+      : baseColor
   const strokeWidth = active ? 2.5 : highlighted ? 1.8 : 1.4
 
   // Arrow marker color
-  const markerColor = active ? activeColor : highlighted ? highlightColor : 'rgba(100, 116, 139, 0.8)'
-
-  // Edge label accent — subtle tint from the active state
-  const labelBorder = active
-    ? 'rgba(56, 189, 248, 0.4)'
+  const markerColor = active
+    ? resolvedActiveColor
     : highlighted
-      ? 'rgba(148, 163, 184, 0.5)'
-      : 'rgba(100, 116, 139, 0.35)'
+      ? highlightColor
+      : isResponse
+        ? 'rgba(196, 167, 125, 0.8)'
+        : 'rgba(100, 116, 139, 0.8)'
+
+  // Edge label accent
+  const labelBorder = active
+    ? failed
+      ? 'rgba(248, 113, 113, 0.4)'
+      : 'rgba(56, 189, 248, 0.4)'
+    : highlighted
+      ? isResponse
+        ? 'rgba(217, 189, 149, 0.5)'
+        : 'rgba(148, 163, 184, 0.5)'
+      : isResponse
+        ? 'rgba(196, 167, 125, 0.35)'
+        : 'rgba(100, 116, 139, 0.35)'
+
+  // Dashed stroke for response edges — visual "return path" cue
+  const strokeDasharray = isResponse && !active ? '6 4' : undefined
+
+  // Halo color: red for failed, blue for normal active
+  const haloColor = failed ? '#f87171' : '#38bdf8'
+  const pulseColor = failed ? '#fecaca' : '#e0f2fe'
 
   return (
     <>
@@ -104,7 +150,7 @@ export function ExecutionEdge({
           </filter>
         )}
 
-        {/* Arrowhead — slightly rounder than default for organic feel */}
+        {/* Arrowhead */}
         <marker
           id={markerId}
           markerWidth="10"
@@ -122,7 +168,7 @@ export function ExecutionEdge({
         </marker>
       </defs>
 
-      {/* Wide invisible hit-area — editor affordance */}
+      {/* Wide invisible hit-area */}
       <path
         d={path}
         fill="none"
@@ -131,12 +177,12 @@ export function ExecutionEdge({
         className="ff-edge-hit"
       />
 
-      {/* Ambient halo: only for active edges */}
+      {/* Ambient halo: active edges (blue or red for failure) */}
       {active && (
         <path
           d={path}
           fill="none"
-          stroke="#38bdf8"
+          stroke={haloColor}
           strokeWidth={6}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -157,6 +203,7 @@ export function ExecutionEdge({
           strokeWidth,
           strokeLinecap: 'round',
           strokeLinejoin: 'round',
+          strokeDasharray,
           fill: 'none',
           color: markerColor,
         }}
@@ -167,11 +214,11 @@ export function ExecutionEdge({
         <path
           d={path}
           fill="none"
-          stroke="#e0f2fe"
+          stroke={pulseColor}
           strokeWidth={2.2}
           strokeDasharray="8 14"
           strokeLinecap="round"
-          className="ff-edge-wire--pulse"
+          className={`ff-edge-wire--pulse ${failed ? 'ff-edge-wire--pulse-failed' : ''}`}
           style={{ opacity: 0.88 }}
         />
       )}
@@ -180,7 +227,7 @@ export function ExecutionEdge({
       {edgeData?.label ? (
         <EdgeLabelRenderer>
           <div
-            className={`ff-edge-label ${active ? 'ff-edge-label--active' : ''}`}
+            className={`ff-edge-label ${active ? (failed ? 'ff-edge-label--failed' : 'ff-edge-label--active') : ''} ${isResponse ? 'ff-edge-label--response' : ''}`}
             style={{
               transform: `translate(-50%, -50%) translate(${labelPos.x}px, ${labelPos.y}px)`,
               borderColor: labelBorder,

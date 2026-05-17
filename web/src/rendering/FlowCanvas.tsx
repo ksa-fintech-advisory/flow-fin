@@ -49,12 +49,14 @@ function FlowCanvasInner() {
   const selectedNodeId = useUiStore((s) => s.selectedNodeId)
   const nodeStates = useRuntimeStore((s) => s.nodeStates)
   const activeEdgeIds = useRuntimeStore((s) => s.activeEdgeIds)
+  const failedEdgeIds = useRuntimeStore((s) => s.failedEdgeIds)
   const bindFlow = useRuntimeStore((s) => s.bindFlow)
 
   const [elkNodes, setElkNodes] = useState<Node[] | null>(null)
   const [edgeGeometry, setEdgeGeometry] = useState<
     Record<string, ElkEdgeGeometry>
   >({})
+  const [backwardIds, setBackwardIds] = useState<Set<string>>(new Set())
   const [layoutVersion, setLayoutVersion] = useState(0)
 
   useEffect(() => {
@@ -88,10 +90,11 @@ function FlowCanvasInner() {
     }))
 
     layoutFlowWithElk(rawNodes, rfEdges)
-      .then(({ nodes: positioned, edgeGeometry: geom }) => {
+      .then(({ nodes: positioned, edgeGeometry: geom, backwardEdgeIds: bIds }) => {
         if (cancelled) return
         setElkNodes(positioned)
         setEdgeGeometry(geom)
+        setBackwardIds(bIds)
         setLayoutVersion((v) => v + 1)
       })
       .catch(() => {
@@ -107,6 +110,7 @@ function FlowCanvasInner() {
           })),
         )
         setEdgeGeometry({})
+        setBackwardIds(new Set())
         setLayoutVersion((v) => v + 1)
       })
 
@@ -149,12 +153,14 @@ function FlowCanvasInner() {
           data: {
             label: e.label,
             active: activeEdgeIds.includes(e.id),
+            failed: failedEdgeIds.includes(e.id),
             highlighted: touchesSelection,
             elkPoints: edgeGeometry[e.id]?.points,
+            direction: backwardIds.has(e.id) ? 'response' as const : 'forward' as const,
           },
         }
       }),
-    [flow.edges, activeEdgeIds, edgeGeometry, selectedNodeId],
+    [flow.edges, activeEdgeIds, failedEdgeIds, edgeGeometry, selectedNodeId, backwardIds],
   )
 
   const onPaneClick = useCallback(() => {
