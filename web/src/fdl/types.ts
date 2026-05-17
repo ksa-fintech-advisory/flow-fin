@@ -53,6 +53,19 @@ export interface SimulationCase {
    * Nodes not listed fall back to "Relaying: <failureReason>".
    */
   failureMessages?: Record<string, string>
+  /**
+   * Real-world transaction context for this simulation case.
+   * Shown in the orchestration bar so the user understands
+   * what is being simulated. e.g. "Customer pays $1,000.00 at an e-commerce merchant"
+   */
+  context?: string
+  /**
+   * Per-edge payload labels shown during simulation.
+   * These represent the data "packet" traveling along each edge,
+   * like Packet Tracer network packets.
+   * Key = edge id, value = the payload label (e.g. "AUTH $1,000.00")
+   */
+  edgePayloads?: Record<string, string>
 }
 
 export interface SimulationConfig {
