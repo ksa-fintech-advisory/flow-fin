@@ -3,41 +3,10 @@ import { Navigate, useParams } from 'react-router-dom'
 import { DEFAULT_SCENARIO_ID, SCENARIOS } from '../fdl/scenarios'
 import { FlowCanvas } from '../rendering/FlowCanvas'
 import { OrchestrationBar } from '../components/OrchestrationBar'
-import { TimelinePanel } from '../components/TimelinePanel'
+import { RuntimeSidebar } from '../components/RuntimeSidebar'
 import { useGraphStore } from '../stores/useGraphStore'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
 import { useUiStore } from '../stores/useUiStore'
-
-function InspectorStrip() {
-  const selectedId = useUiStore((s) => s.selectedNodeId)
-  const flow = useGraphStore((s) => s.flow)
-
-  const node = selectedId
-    ? flow.nodes.find((n) => n.id === selectedId)
-    : undefined
-
-  return (
-    <footer className="ff-inspector">
-      {node ? (
-        <>
-          <strong>{node.label ?? node.id}</strong>
-          <span className="ff-inspector__muted">{node.kind}</span>
-          {node.metadata && Object.keys(node.metadata).length ? (
-            <span className="ff-inspector__meta">
-              {JSON.stringify(node.metadata)}
-            </span>
-          ) : (
-            <span className="ff-inspector__muted">No metadata on this node</span>
-          )}
-        </>
-      ) : (
-        <span className="ff-inspector__muted">
-          Select a node to inspect FDL semantics · ELK orthogonal layout
-        </span>
-      )}
-    </footer>
-  )
-}
 
 export function PlaygroundPage() {
   const { scenarioId } = useParams<{ scenarioId: string }>()
@@ -67,9 +36,8 @@ export function PlaygroundPage() {
       <OrchestrationBar />
       <main className="ff-main">
         <FlowCanvas />
-        <TimelinePanel />
+        <RuntimeSidebar />
       </main>
-      <InspectorStrip />
     </div>
   )
 }

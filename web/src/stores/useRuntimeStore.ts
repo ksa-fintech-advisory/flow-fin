@@ -13,6 +13,8 @@ export interface TimelineEntry {
   title: string
   detail?: string
   tone: 'neutral' | 'success' | 'warn' | 'error'
+  /** Node this event primarily relates to (for inspector filtering) */
+  nodeId?: string
 }
 
 interface RuntimeStore {
@@ -177,6 +179,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
           title: msg.title,
           detail: msg.detail,
           tone: 'success' as const,
+          nodeId: completedId,
         },
       ]
     }
@@ -236,6 +239,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
               title: `Entering: ${runCopy.title}`,
               detail: node ? `${node.kind} · ${node.label ?? node.id}` : undefined,
               tone: 'neutral',
+              nodeId: nextId,
             },
           ]
         : [
@@ -245,6 +249,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
               title: `Entering: ${runCopy.title}`,
               detail: node ? `${node.kind} · ${node.label ?? node.id}` : undefined,
               tone: 'neutral',
+              nodeId: nextId,
             },
           ]
 

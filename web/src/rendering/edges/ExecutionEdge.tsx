@@ -1,18 +1,20 @@
 import {
   BaseEdge,
+  EdgeLabelRenderer,
   type EdgeProps,
   getSmoothStepPath,
 } from '@xyflow/react'
 
 import {
-  softConnectorPath,
+  labelAboveMidSegment,
+  roundedOrthoPath,
   snapEndpoints,
 } from '../edgePath'
 
 export type ExecutionEdgeData = {
   label?: string
   active?: boolean
-  /** ELK orthogonal polyline — snapped to handles then rounded in SVG */
+  highlighted?: boolean
   elkPoints?: { x: number; y: number }[]
 }
 
@@ -24,6 +26,7 @@ export function ExecutionEdge({
   targetY,
   sourcePosition,
   targetPosition,
+  selected,
   data,
 }: EdgeProps) {
   const edgeData = data as ExecutionEdgeData | undefined
@@ -35,50 +38,107 @@ export function ExecutionEdge({
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 16,
   })
 
   const elkRaw = edgeData?.elkPoints
 
   let path: string
-  let labelX: number
-  let labelY: number
+  let labelAnchor: { x: number; y: number }
 
   if (elkRaw && elkRaw.length >= 2) {
     const snapped = snapEndpoints(elkRaw, sourceX, sourceY, targetX, targetY)
-    path = softConnectorPath(snapped, 0.2)
-    const midSeg = Math.floor((snapped.length - 1) / 2)
-    const a = snapped[midSeg]
-    const b = snapped[midSeg + 1]
-    labelX = (a.x + b.x) / 2
-    labelY = (a.y + b.y) / 2
+    path = roundedOrthoPath(snapped, 12)
+    labelAnchor = labelAboveMidSegment(snapped, 22)
   } else {
     path = smoothPath
-    labelX = smoothLabelX
-    labelY = smoothLabelY
+    labelAnchor = { x: smoothLabelX, y: smoothLabelY }
   }
 
   const active = Boolean(edgeData?.active)
+  const highlighted = Boolean(edgeData?.highlighted) || Boolean(selected)
+
+  const markerId = `ff-arrow-${id}`
+
+  const wireClass = [
+    'ff-edge-wire',
+    active ? 'ff-edge-wire--active' : '',
+    highlighted ? 'ff-edge-wire--highlight' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <>
+      <defs>
+        <marker
+          id={markerId}
+          markerWidth="8"
+          markerHeight="8"
+          refX="7"
+          refY="4"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path
+            d="M0,0 L8,4 L0,8 Z"
+            className="ff-edge-marker"
+            fill="currentColor"
+          />
+        </marker>
+      </defs>
+
+      {/* Wide hit area for hover affordance (editor-like) */}
+      <path
+        d={path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={18}
+        className="ff-edge-hit"
+      />
+
       <BaseEdge
         id={id}
         path={path}
-        className={active ? 'ff-edge-wire ff-edge-wire--active' : 'ff-edge-wire'}
+        markerEnd={`url(#${markerId})`}
+        className={wireClass}
         style={{
-          stroke: active ? '#38bdf8' : 'rgba(148, 163, 184, 0.92)',
-          strokeWidth: active ? 2.65 : 1.25,
+          stroke: active
+            ? '#38bdf8'
+            : highlighted
+              ? '#94a3b8'
+              : 'rgba(100, 116, 139, 0.85)',
+          strokeWidth: active ? 2.5 : highlighted ? 2 : 1.5,
           strokeLinecap: 'round',
           strokeLinejoin: 'round',
           fill: 'none',
-          shapeRendering: 'geometricPrecision',
-          transition: 'stroke 160ms ease, stroke-width 160ms ease',
+          color: active ? '#38bdf8' : 'rgba(148, 163, 184, 0.9)',
         }}
       />
+
+      {active ? (
+        <path
+          d={path}
+          fill="none"
+          stroke="#e0f2fe"
+          strokeWidth={2}
+          strokeDasharray="6 10"
+          strokeLinecap="round"
+          className="ff-edge-wire--pulse"
+        />
+      ) : null}
+
       {edgeData?.label ? (
-        <text x={labelX} y={labelY} className="ff-edge-inline-label">
-          {edgeData.label}
-        </text>
+        <EdgeLabelRenderer>
+          <div
+            className="ff-edge-label"
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelAnchor.x}px, ${labelAnchor.y}px)`,
+            }}
+          >
+            {edgeData.label}
+          </div>
+        </EdgeLabelRenderer>
       ) : null}
     </>
   )

@@ -157,3 +157,19 @@ function simplifyOrthoWaypoints(pts: Point[]): Point[] {
   return out
 }
 
+/** Offset edge label off the wire (pill sits above the segment). */
+export function labelAboveMidSegment(points: Point[], pxOffset: number): Point {
+  if (points.length < 2) return points[0]
+  const midSeg = Math.floor((points.length - 1) / 2)
+  const p0 = points[midSeg]
+  const p1 = points[midSeg + 1]
+  const dx = p1.x - p0.x
+  const dy = p1.y - p0.y
+  const L = Math.hypot(dx, dy) || 1
+  const nx = -dy / L
+  const ny = dx / L
+  const cx = (p0.x + p1.x) / 2
+  const cy = (p0.y + p1.y) / 2
+  return { x: cx + nx * pxOffset, y: cy + ny * pxOffset }
+}
+

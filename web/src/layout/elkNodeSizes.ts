@@ -13,6 +13,6 @@ export function elkBBoxForKind(kind: FDLNodeKind): {
     case 'routing':
       return { width: 140, height: 140 }
     default:
-      return { width: 216, height: 88 }
+      return { width: 228, height: 108 }
   }
 }

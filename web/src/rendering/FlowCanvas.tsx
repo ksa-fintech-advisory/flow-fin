@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
 import {
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
+  Panel,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
@@ -43,6 +45,7 @@ function ElkFitView({ layoutVersion }: { layoutVersion: number }) {
 
 function FlowCanvasInner() {
   const flow = useGraphStore((s) => s.flow)
+  const selectedNodeId = useUiStore((s) => s.selectedNodeId)
   const nodeStates = useRuntimeStore((s) => s.nodeStates)
   const activeEdgeIds = useRuntimeStore((s) => s.activeEdgeIds)
   const bindFlow = useRuntimeStore((s) => s.bindFlow)
@@ -117,6 +120,7 @@ function FlowCanvasInner() {
         type: fn.kind,
         width,
         height,
+        selected: selectedNodeId === node.id,
         data: {
           kind: fn.kind,
           label: fn.label ?? fn.id,
@@ -124,26 +128,36 @@ function FlowCanvasInner() {
         },
       }
     })
-  }, [elkNodes, flow.nodes, nodeStates])
+  }, [elkNodes, flow.nodes, nodeStates, selectedNodeId])
 
   const edges: Edge[] = useMemo(
     () =>
-      flow.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        type: 'execution',
-        data: {
-          label: e.label,
-          active: activeEdgeIds.includes(e.id),
-          elkPoints: edgeGeometry[e.id]?.points,
-        },
-      })),
-    [flow.edges, activeEdgeIds, edgeGeometry],
+      flow.edges.map((e) => {
+        const touchesSelection =
+          selectedNodeId != null &&
+          (e.source === selectedNodeId || e.target === selectedNodeId)
+        return {
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          type: 'execution',
+          data: {
+            label: e.label,
+            active: activeEdgeIds.includes(e.id),
+            highlighted: touchesSelection,
+            elkPoints: edgeGeometry[e.id]?.points,
+          },
+        }
+      }),
+    [flow.edges, activeEdgeIds, edgeGeometry, selectedNodeId],
   )
 
   const onPaneClick = useCallback(() => {
     useUiStore.getState().setSelectedNodeId(null)
+  }, [])
+
+  const onNodeClick = useCallback((_: MouseEvent, node: Node) => {
+    useUiStore.getState().setSelectedNodeId(node.id)
   }, [])
 
   return (
@@ -155,27 +169,50 @@ function FlowCanvasInner() {
       ) : (
         <ReactFlow
           key={flow.id}
+          className="ff-flow-editor"
           nodes={nodes}
           edges={edges}
           nodeTypes={flowNodeTypes}
           edgeTypes={edgeTypes}
-          fitViewOptions={{ padding: 0.2 }}
-          minZoom={0.25}
-          maxZoom={1.85}
+          fitViewOptions={{ padding: 0.28 }}
+          minZoom={0.2}
+          maxZoom={2}
           proOptions={{ hideAttribution: true }}
           onPaneClick={onPaneClick}
+          onNodeClick={onNodeClick}
           nodesConnectable={false}
+          nodesDraggable={false}
+          elementsSelectable
+          panOnScroll
+          zoomOnScroll
+          zoomOnPinch
+          panOnDrag
+          selectionOnDrag={false}
           elevateEdgesOnSelect
+          elevateNodesOnSelect
         >
           <ElkFitView layoutVersion={layoutVersion} />
-          <Background gap={24} size={1} color="#1e293b" />
-          <Controls showInteractive={false} />
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1.2}
+            color="#334155"
+          />
+          <Controls
+            showInteractive={false}
+            className="ff-flow-controls"
+            position="bottom-left"
+          />
           <MiniMap
             className="ff-minimap"
             pannable
             zoomable
             maskColor="rgba(15, 23, 42, 0.82)"
+            nodeColor={() => '#475569'}
           />
+          <Panel position="top-right" className="ff-canvas-hint">
+            Scroll to zoom · drag canvas to pan
+          </Panel>
         </ReactFlow>
       )}
     </div>
