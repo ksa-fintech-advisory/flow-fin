@@ -1,4 +1,4 @@
-import type { FlowDefinition } from '../types'
+import type { FlowDefinition, SimulationCase } from '../types'
 
 export type ScenarioMeta = {
   id: string
@@ -14,15 +14,78 @@ function spine(
   return { stepDelayMs, sequence: steps }
 }
 
-/** Shared ENTRY / EXIT topology helpers — each scenario keeps explicit terminals */
+/** Build simulation config with multiple named cases */
+function multiCase(
+  stepDelayMs: number,
+  cases: SimulationCase[],
+): NonNullable<FlowDefinition['simulation']> {
+  return {
+    stepDelayMs,
+    sequence: cases[0]!.sequence, // default for backward compat
+    cases,
+  }
+}
+
 const S = 'n_start'
 const E = 'n_end'
 
 export const SCENARIOS: ScenarioMeta[] = [
+  /* ─── 1. Card Payment (from spec) ─── */
+  {
+    id: 'card-payment',
+    title: 'Card payment',
+    subtitle: 'Full card payment flow: approved & declined paths',
+    flow: {
+      id: 'card-payment',
+      name: 'Card payment authorization',
+      metadata: { domain: 'payments' },
+      nodes: [
+        { id: S, kind: 'start', label: 'Customer' },
+        { id: 'ngw', kind: 'payment', label: 'Payment gateway' },
+        { id: 'nproc', kind: 'payment', label: 'Payment processor' },
+        { id: 'nacq', kind: 'settlement', label: 'Acquirer bank' },
+        { id: 'nnet', kind: 'routing', label: 'Card network' },
+        { id: 'niss', kind: 'fraud_check', label: 'Issuing bank' },
+        { id: E, kind: 'end', label: 'Customer result' },
+      ],
+      edges: [
+        { id: 'e0', source: S, target: 'ngw' },
+        { id: 'e1', source: 'ngw', target: 'nproc' },
+        { id: 'e2', source: 'nproc', target: 'nacq' },
+        { id: 'e3', source: 'nacq', target: 'nnet' },
+        { id: 'e4', source: 'nnet', target: 'niss' },
+        { id: 'e5', source: 'niss', target: 'nnet', label: 'response' },
+        { id: 'e6', source: 'nnet', target: 'nacq', label: 'relay' },
+        { id: 'e7', source: 'nacq', target: 'nproc', label: 'relay' },
+        { id: 'e8', source: 'nproc', target: 'ngw', label: 'relay' },
+        { id: 'e9', source: 'ngw', target: E, label: 'result' },
+      ],
+      simulation: multiCase(800, [
+        {
+          id: 'approved',
+          label: '✓ Approved — balance OK, no risk',
+          sequence: [S, 'ngw', 'nproc', 'nacq', 'nnet', 'niss', 'nnet', 'nacq', 'nproc', 'ngw', E],
+        },
+        {
+          id: 'declined-balance',
+          label: '✗ Declined — insufficient balance',
+          sequence: [S, 'ngw', 'nproc', 'nacq', 'nnet', 'niss', 'nnet', 'nacq', 'nproc', 'ngw', E],
+          terminalStates: { niss: 'failed', nnet: 'failed', nacq: 'failed', nproc: 'failed', ngw: 'failed', [E]: 'failed' },
+        },
+        {
+          id: 'declined-risk',
+          label: '✗ Declined — risk flagged',
+          sequence: [S, 'ngw', 'nproc', 'nacq', 'nnet', 'niss', 'nnet', 'nacq', 'nproc', 'ngw', E],
+          terminalStates: { niss: 'failed', nnet: 'failed', nacq: 'failed', nproc: 'failed', ngw: 'failed', [E]: 'failed' },
+        },
+      ]),
+    },
+  },
+  /* ─── 2. Card capture ─── */
   {
     id: 'card-capture',
     title: 'Card capture',
-    subtitle: 'Ingest → fraud diamond → approval → settlement + retry loop',
+    subtitle: 'Ingest → fraud → approval → settlement + retry loop',
     flow: {
       id: 'card-capture',
       name: 'Card capture → fraud → approval → settlement',
@@ -45,16 +108,18 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'e5', source: 'nfraud', target: 'nretry', label: 'soft decline' },
         { id: 'e6', source: 'nretry', target: 'nfraud', label: 're-present' },
       ],
-      simulation: spine(
-        [S, 'npay', 'nfraud', 'napprove', 'nsettle', E],
-        900,
-      ),
+      simulation: multiCase(900, [
+        { id: 'success', label: '✓ Approved — fraud clear', sequence: [S, 'npay', 'nfraud', 'napprove', 'nsettle', E] },
+        { id: 'soft-decline', label: '⟲ Soft decline — retry loop', sequence: [S, 'npay', 'nfraud', 'nretry', 'nfraud', 'napprove', 'nsettle', E] },
+        { id: 'hard-decline', label: '✗ Hard decline — blocked', sequence: [S, 'npay', 'nfraud'], terminalStates: { nfraud: 'failed' } },
+      ]),
     },
   },
+  /* ─── 3. Instant refund ─── */
   {
     id: 'instant-refund',
     title: 'Instant refund',
-    subtitle: 'Wallet fund → screening → route ok/challenge → ledger sync',
+    subtitle: 'Wallet → screening → route ok/challenge → ledger sync',
     flow: {
       id: 'instant-refund',
       name: 'Instant refund path',
@@ -79,9 +144,13 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'e6', source: 'napprove', target: 'nrec' },
         { id: 'e7', source: 'nrec', target: E },
       ],
-      simulation: spine([S, 'nw', 'npay', 'nfraud', 'nroute', 'nrec', E], 850),
+      simulation: multiCase(850, [
+        { id: 'auto-approve', label: '✓ Auto-approved refund', sequence: [S, 'nw', 'npay', 'nfraud', 'nroute', 'nrec', E] },
+        { id: 'manual-review', label: '⚠ Manual review required', sequence: [S, 'nw', 'npay', 'nfraud', 'nroute', 'napprove', 'nrec', E] },
+      ]),
     },
   },
+  /* ─── 4. Crypto on-ramp ─── */
   {
     id: 'crypto-onramp',
     title: 'Crypto on-ramp',
@@ -108,9 +177,14 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'e5', source: 'nretry', target: 'nroute', label: 're-quote' },
         { id: 'e6', source: 'nsettle', target: E },
       ],
-      simulation: spine([S, 'nw', 'nroute', 'nfraud', 'nsettle', E], 880),
+      simulation: multiCase(880, [
+        { id: 'pass', label: '✓ AML pass — settled', sequence: [S, 'nw', 'nroute', 'nfraud', 'nsettle', E] },
+        { id: 'review-retry', label: '⟲ AML review — resubmit', sequence: [S, 'nw', 'nroute', 'nfraud', 'nretry', 'nroute', 'nfraud', 'nsettle', E] },
+        { id: 'blocked', label: '✗ AML blocked', sequence: [S, 'nw', 'nroute', 'nfraud'], terminalStates: { nfraud: 'failed' } },
+      ]),
     },
   },
+  /* ─── 5. Treasury sweep ─── */
   {
     id: 'treasury-sweep',
     title: 'Treasury sweep',
@@ -137,9 +211,13 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'e5', source: 'nsettle', target: 'nw' },
         { id: 'e6', source: 'nw', target: E },
       ],
-      simulation: spine([S, 'nrec', 'nroute', 'nsettle', 'nw', E], 920),
+      simulation: multiCase(920, [
+        { id: 'primary', label: '✓ Primary sweep', sequence: [S, 'nrec', 'nroute', 'nsettle', 'nw', E] },
+        { id: 'deferred', label: '⟲ Deferred → retry → sweep', sequence: [S, 'nrec', 'nroute', 'nretry', 'nroute', 'nsettle', 'nw', E] },
+      ]),
     },
   },
+  /* ─── 6. Batch payout ─── */
   {
     id: 'batch-payout',
     title: 'Batch payout',
@@ -168,94 +246,17 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'e6', source: 'nset_b', target: 'nrec' },
         { id: 'e7', source: 'nrec', target: E },
       ],
-      simulation: spine(
-        [S, 'nroute', 'npay_a', 'nset_a', 'nrec', E],
-        900,
-      ),
+      simulation: multiCase(900, [
+        { id: 'rail-a', label: 'Rail A path', sequence: [S, 'nroute', 'npay_a', 'nset_a', 'nrec', E] },
+        { id: 'rail-b', label: 'Rail B path', sequence: [S, 'nroute', 'npay_b', 'nset_b', 'nrec', E] },
+      ]),
     },
   },
-  {
-    id: 'internal-transfer',
-    title: 'Internal transfer',
-    subtitle: 'Wallet → routing rules → destination wallet',
-    flow: {
-      id: 'internal-transfer',
-      name: 'Internal transfer',
-      metadata: { domain: 'payments' },
-      nodes: [
-        { id: S, kind: 'start', label: 'Entry' },
-        { id: 'nw1', kind: 'wallet', label: 'Source wallet' },
-        { id: 'nroute', kind: 'routing', label: 'Limits / FX' },
-        { id: 'nfraud', kind: 'fraud_check', label: 'Velocity check' },
-        { id: 'nw2', kind: 'wallet', label: 'Dest wallet' },
-        { id: E, kind: 'end', label: 'Exit' },
-      ],
-      edges: [
-        { id: 'e0', source: S, target: 'nw1' },
-        { id: 'e1', source: 'nw1', target: 'nroute' },
-        { id: 'e2', source: 'nroute', target: 'nfraud' },
-        { id: 'e3', source: 'nfraud', target: 'nw2', label: 'ok' },
-        { id: 'e4', source: 'nw2', target: E },
-      ],
-      simulation: spine([S, 'nw1', 'nroute', 'nfraud', 'nw2', E], 800),
-    },
-  },
-  {
-    id: 'merchant-acquiring',
-    title: 'Merchant acquiring',
-    subtitle: 'Linear capture → settle → recon (clean spine)',
-    flow: {
-      id: 'merchant-acquiring',
-      name: 'Merchant acquiring',
-      metadata: { domain: 'payments' },
-      nodes: [
-        { id: S, kind: 'start', label: 'Entry' },
-        { id: 'npay', kind: 'payment', label: 'POS capture' },
-        { id: 'nsettle', kind: 'settlement', label: 'Acquirer settle' },
-        { id: 'nrec', kind: 'reconciliation', label: 'Batch recon' },
-        { id: E, kind: 'end', label: 'Exit' },
-      ],
-      edges: [
-        { id: 'e0', source: S, target: 'npay' },
-        { id: 'e1', source: 'npay', target: 'nsettle' },
-        { id: 'e2', source: 'nsettle', target: 'nrec' },
-        { id: 'e3', source: 'nrec', target: E },
-      ],
-      simulation: spine([S, 'npay', 'nsettle', 'nrec', E], 750),
-    },
-  },
-  {
-    id: 'subscription-renewal',
-    title: 'Subscription renewal',
-    subtitle: 'Recurring charge with fraud + approval gate',
-    flow: {
-      id: 'subscription-renewal',
-      name: 'Subscription renewal',
-      metadata: { domain: 'payments' },
-      nodes: [
-        { id: S, kind: 'start', label: 'Entry' },
-        { id: 'npay', kind: 'payment', label: 'Renewal charge' },
-        { id: 'nfraud', kind: 'fraud_check', label: 'Risk screen' },
-        { id: 'napprove', kind: 'approval', label: 'SCA step-up' },
-        { id: 'nsettle', kind: 'settlement', label: 'Billing settle' },
-        { id: 'nw', kind: 'wallet', label: 'Credits wallet' },
-        { id: E, kind: 'end', label: 'Exit' },
-      ],
-      edges: [
-        { id: 'e0', source: S, target: 'npay' },
-        { id: 'e1', source: 'npay', target: 'nfraud' },
-        { id: 'e2', source: 'nfraud', target: 'napprove' },
-        { id: 'e3', source: 'napprove', target: 'nsettle' },
-        { id: 'e4', source: 'nsettle', target: 'nw' },
-        { id: 'e5', source: 'nw', target: E },
-      ],
-      simulation: spine([S, 'npay', 'nfraud', 'napprove', 'nsettle', 'nw', E], 860),
-    },
-  },
+  /* ─── 7. Cross-border FX ─── */
   {
     id: 'cross-border-fx',
     title: 'Cross-border FX',
-    subtitle: 'Route corridor → fraud → dual approval → settle',
+    subtitle: 'Route corridor → fraud → approval → settle',
     flow: {
       id: 'cross-border-fx',
       name: 'Cross-border FX',
@@ -278,13 +279,18 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'e5', source: 'napprove', target: 'nsettle' },
         { id: 'e6', source: 'nsettle', target: E },
       ],
-      simulation: spine([S, 'nroute', 'nfraud', 'napprove', 'nsettle', E], 900),
+      simulation: multiCase(900, [
+        { id: 'release', label: '✓ Released — compliance pass', sequence: [S, 'nroute', 'nfraud', 'napprove', 'nsettle', E] },
+        { id: 'hold-reroute', label: '⟲ Held → repair → re-route', sequence: [S, 'nroute', 'nfraud', 'nretry', 'nroute', 'nfraud', 'napprove', 'nsettle', E] },
+        { id: 'blocked', label: '✗ Compliance blocked', sequence: [S, 'nroute', 'nfraud'], terminalStates: { nfraud: 'failed' } },
+      ]),
     },
   },
+  /* ─── 8. Chargeback dispute ─── */
   {
     id: 'chargeback',
     title: 'Chargeback dispute',
-    subtitle: 'Ledger hook → fraud narrative → approval → settlement credit',
+    subtitle: 'Ledger hook → fraud → approval → settlement credit',
     flow: {
       id: 'chargeback',
       name: 'Chargeback dispute',
@@ -307,63 +313,14 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'e5', source: 'napprove', target: 'nsettle' },
         { id: 'e6', source: 'nsettle', target: E },
       ],
-      simulation: spine([S, 'nrec', 'nfraud', 'napprove', 'nsettle', E], 910),
+      simulation: multiCase(910, [
+        { id: 'accepted', label: '✓ Evidence accepted', sequence: [S, 'nrec', 'nfraud', 'napprove', 'nsettle', E] },
+        { id: 'retry-docs', label: '⟲ Needs docs → retry', sequence: [S, 'nrec', 'nfraud', 'nretry', 'nfraud', 'napprove', 'nsettle', E] },
+        { id: 'lost', label: '✗ Dispute lost', sequence: [S, 'nrec', 'nfraud'], terminalStates: { nfraud: 'failed' } },
+      ]),
     },
   },
-  {
-    id: 'liquidity-park',
-    title: 'Liquidity park',
-    subtitle: 'Idle cash wallet → recon snapshot → route → market settle',
-    flow: {
-      id: 'liquidity-park',
-      name: 'Liquidity park',
-      metadata: { domain: 'treasury' },
-      nodes: [
-        { id: S, kind: 'start', label: 'Entry' },
-        { id: 'nw', kind: 'wallet', label: 'Park wallet' },
-        { id: 'nrec', kind: 'reconciliation', label: 'NAV snapshot' },
-        { id: 'nroute', kind: 'routing', label: 'Venue router' },
-        { id: 'nsettle', kind: 'settlement', label: 'MMF settle' },
-        { id: E, kind: 'end', label: 'Exit' },
-      ],
-      edges: [
-        { id: 'e0', source: S, target: 'nw' },
-        { id: 'e1', source: 'nw', target: 'nrec' },
-        { id: 'e2', source: 'nrec', target: 'nroute' },
-        { id: 'e3', source: 'nroute', target: 'nsettle', label: 'allocate' },
-        { id: 'e4', source: 'nsettle', target: E },
-      ],
-      simulation: spine([S, 'nw', 'nrec', 'nroute', 'nsettle', E], 870),
-    },
-  },
-  {
-    id: 'rtp-instant',
-    title: 'RTP instant',
-    subtitle: 'Wallet liquidity → route RTP/FedNow → settle → recon proof',
-    flow: {
-      id: 'rtp-instant',
-      name: 'RTP instant credit',
-      metadata: { domain: 'payments' },
-      nodes: [
-        { id: S, kind: 'start', label: 'Entry' },
-        { id: 'nw', kind: 'wallet', label: 'Prefunded wallet' },
-        { id: 'nroute', kind: 'routing', label: 'RTP vs ACH' },
-        { id: 'npay', kind: 'payment', label: 'Push construct' },
-        { id: 'nsettle', kind: 'settlement', label: 'Instant settle' },
-        { id: 'nrec', kind: 'reconciliation', label: 'Proof snapshot' },
-        { id: E, kind: 'end', label: 'Exit' },
-      ],
-      edges: [
-        { id: 'e0', source: S, target: 'nw' },
-        { id: 'e1', source: 'nw', target: 'nroute' },
-        { id: 'e2', source: 'nroute', target: 'npay', label: 'instant' },
-        { id: 'e3', source: 'npay', target: 'nsettle' },
-        { id: 'e4', source: 'nsettle', target: 'nrec' },
-        { id: 'e5', source: 'nrec', target: E },
-      ],
-      simulation: spine([S, 'nw', 'nroute', 'npay', 'nsettle', 'nrec', E], 840),
-    },
-  },
+  /* ─── 9. Fraud escalation ─── */
   {
     id: 'fraud-escalation',
     title: 'Fraud escalation',
@@ -392,10 +349,10 @@ export const SCENARIOS: ScenarioMeta[] = [
         { id: 'e6', source: 'napprove', target: 'nsettle' },
         { id: 'e7', source: 'nsettle', target: E },
       ],
-      simulation: spine(
-        [S, 'npay', 'nfraud', 'nroute', 'napprove', 'nsettle', E],
-        890,
-      ),
+      simulation: multiCase(890, [
+        { id: 'tier2-release', label: '✓ Tier-2 → analyst → release', sequence: [S, 'npay', 'nfraud', 'nroute', 'napprove', 'nsettle', E] },
+        { id: 'cooloff-replay', label: '⟲ Deferred → cooloff → replay', sequence: [S, 'npay', 'nfraud', 'nroute', 'nretry', 'nfraud', 'nroute', 'napprove', 'nsettle', E] },
+      ]),
     },
   },
 ]

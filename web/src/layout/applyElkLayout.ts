@@ -83,27 +83,30 @@ function countNodesBetweenX(
 }
 
 /**
- * Layered + orthogonal: feedback routes for loops, multi-row wrapping so graphs
- * do not collapse into one rigid horizontal spine when width grows.
+ * Layered + spline routing: cinematic operational topology feel.
+ * Inspired by Cisco Packet Tracer, Miro topology maps, observability graphs.
+ * SPLINES routing + BRANDES_KOEPF placement = organic spatial distribution.
  */
 const LAYOUT_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
-  /* Generous node gaps — Figma/Miro-style breathing room */
-  'elk.spacing.nodeNode': '112',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '208',
-  'elk.layered.spacing.edgeNodeBetweenLayers': '72',
-  'org.eclipse.elk.edgeRouting': 'ORTHOGONAL',
+  /* Cinematic breathing room — topology systems (not workflow editors) */
+  'elk.spacing.nodeNode': '148',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '280',
+  'elk.layered.spacing.edgeNodeBetweenLayers': '96',
+  /* SPLINES: curves naturally around topology — Figma / Miro feel */
+  'org.eclipse.elk.edgeRouting': 'SPLINES',
   'org.eclipse.elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-  'org.eclipse.elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+  /* BRANDES_KOEPF gives natural vertical spread — breaks grid alignment */
+  'org.eclipse.elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
   'org.eclipse.elk.layered.nodePlacement.favorStraightEdges': 'false',
-  /* Critical: parallel connector separation */
-  'org.eclipse.elk.spacing.edgeEdge': '80',
-  'org.eclipse.elk.spacing.edgeNode': '44',
-  'org.eclipse.elk.padding': '56',
+  'org.eclipse.elk.layered.nodePlacement.bk.fixedAlignment': 'NONE',
+  /* Generous edge separation for visual clarity */
+  'org.eclipse.elk.spacing.edgeEdge': '96',
+  'org.eclipse.elk.spacing.edgeNode': '56',
+  'org.eclipse.elk.padding': '80',
   'org.eclipse.elk.layered.feedbackEdges': 'true',
   'org.eclipse.elk.layered.mergeEdges': 'false',
-  /* Single-row primary axis reads cleaner than aggressive wrap for boards */
   'org.eclipse.elk.layered.wrapping.strategy': 'OFF',
   'org.eclipse.elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
 } satisfies Record<string, string>
@@ -159,13 +162,33 @@ export async function layoutFlowWithElk(
     detourLaneCursor += 1
   }
 
+  // Collect layer X boundaries for per-layer jitter
+  // Group nodes by their approximate X layer to add subtle Y stagger
+  const layerMap = new Map<number, string[]>()
+  for (const child of children) {
+    const layerKey = Math.round((child.x ?? 0) / 60) // bucket by ~60px
+    const bucket = layerMap.get(layerKey) ?? []
+    bucket.push(child.id)
+    layerMap.set(layerKey, bucket)
+  }
+  // Assign a subtle but intentional Y jitter offset per layer-slot
+  const jitterById = new Map<string, number>()
+  for (const [, ids] of layerMap) {
+    ids.forEach((id, slotIdx) => {
+      // Organic stagger: alternate above/below centerline slightly
+      const direction = slotIdx % 2 === 0 ? 1 : -1
+      jitterById.set(id, direction * slotIdx * 14)
+    })
+  }
+
   const positioned = nodes.map((node) => {
     const box = children.find((c) => c.id === node.id)
+    const jitter = jitterById.get(node.id) ?? 0
     return {
       ...node,
       position: {
         x: box?.x ?? 0,
-        y: box?.y ?? 0,
+        y: (box?.y ?? 0) + jitter,
       },
     }
   })

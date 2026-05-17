@@ -29,11 +29,35 @@ export interface FDLEdge {
   label?: string
 }
 
+/**
+ * A single named simulation case — e.g. "Approved", "Declined", "Retry loop".
+ * Each case defines a different sequence through the same topology.
+ */
+export interface SimulationCase {
+  /** Short display name (appears in case picker) */
+  id: string
+  /** Human-readable label */
+  label: string
+  /** Ordered node ids this case walks through */
+  sequence: string[]
+  /** Final state for each node at end of this case ('success' | 'failed') */
+  terminalStates?: Record<string, RuntimeNodeState>
+}
+
 export interface SimulationConfig {
   /** Wall-clock delay between completed steps while running */
   stepDelayMs: number
-  /** Ordered node ids for deterministic simulation along the main spine */
+  /**
+   * Ordered node ids for deterministic simulation along the main spine.
+   * @deprecated Use `cases` array instead. Kept for backward compat.
+   */
   sequence: string[]
+  /**
+   * Multiple named simulation cases.
+   * When present, the user can pick which case (path) to simulate.
+   * The first case is the default.
+   */
+  cases?: SimulationCase[]
 }
 
 export interface FlowDefinition {

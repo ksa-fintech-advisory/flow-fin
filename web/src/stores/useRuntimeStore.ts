@@ -3,6 +3,7 @@ import type {
   FlowDefinition,
   FDLNodeKind,
   RuntimeNodeState,
+  SimulationCase,
 } from '../fdl/types'
 
 export type SimulationPhase = 'idle' | 'running' | 'paused' | 'completed'
@@ -13,17 +14,17 @@ export interface TimelineEntry {
   title: string
   detail?: string
   tone: 'neutral' | 'success' | 'warn' | 'error'
-  /** Node this event primarily relates to (for inspector filtering) */
   nodeId?: string
 }
 
 interface RuntimeStore {
   phase: SimulationPhase
-  /** Index into simulation.sequence for the node currently marked running after advance */
   cursor: number
   nodeStates: Record<string, RuntimeNodeState>
   activeEdgeIds: string[]
   timeline: TimelineEntry[]
+  /** Currently selected simulation case id */
+  activeCaseId: string | null
 
   bindFlow: (flow: FlowDefinition) => void
   reset: () => void
@@ -32,67 +33,60 @@ interface RuntimeStore {
   resume: () => void
   stepForward: () => void
   advanceStep: () => void
+  selectCase: (caseId: string) => void
 }
 
 let boundFlow: FlowDefinition | null = null
+
+function getActiveCase(flow: FlowDefinition, caseId: string | null): SimulationCase | null {
+  const cases = flow.simulation?.cases
+  if (!cases?.length) return null
+  if (caseId) {
+    const found = cases.find((c) => c.id === caseId)
+    if (found) return found
+  }
+  return cases[0]!
+}
+
+function getSequence(flow: FlowDefinition, caseId: string | null): string[] {
+  const simCase = getActiveCase(flow, caseId)
+  if (simCase) return simCase.sequence
+  return flow.simulation?.sequence ?? []
+}
 
 function edgeBetween(
   flow: FlowDefinition,
   source: string,
   target: string,
 ): string | undefined {
-  return flow.edges.find((e) => e.source === source && e.target === target)
-    ?.id
+  return flow.edges.find((e) => e.source === source && e.target === target)?.id
 }
 
 function timelineCopyForKind(
   kind: FDLNodeKind,
   label: string,
+  isFailed?: boolean,
 ): { title: string; detail?: string } {
+  if (isFailed) {
+    switch (kind) {
+      case 'fraud_check': return { title: 'Check declined', detail: `${label} flagged or blocked` }
+      case 'payment': return { title: 'Payment declined', detail: `${label} rejected` }
+      case 'end': return { title: 'Flow ended — declined', detail: label }
+      default: return { title: 'Step failed', detail: label }
+    }
+  }
   switch (kind) {
-    case 'start':
-      return {
-        title: 'Runtime entry',
-        detail: `${label} · flow armed`,
-      }
-    case 'end':
-      return {
-        title: 'Runtime exit',
-        detail: `${label} · execution closed`,
-      }
-    case 'payment':
-      return {
-        title: 'Payment authorized',
-        detail: `${label} accepted payload & risk flags`,
-      }
-    case 'fraud_check':
-      return {
-        title: 'Fraud check passed',
-        detail: `${label} cleared velocity & device signals`,
-      }
-    case 'approval':
-      return {
-        title: 'Strong customer approval',
-        detail: `${label} completed SCA challenge`,
-      }
-    case 'settlement':
-      return {
-        title: 'Settlement posted',
-        detail: `${label} handed off to clearing`,
-      }
-    case 'retry':
-      return {
-        title: 'Retry scheduled',
-        detail: `${label} queued with backoff`,
-      }
-    case 'routing':
-      return { title: 'Route selected', detail: label }
-    case 'wallet':
-      return { title: 'Wallet updated', detail: label }
-    case 'reconciliation':
-      return { title: 'Reconciliation tick', detail: label }
-    default:
-      return { title: 'Step complete', detail: label }
+    case 'start': return { title: 'Runtime entry', detail: `${label} · flow armed` }
+    case 'end': return { title: 'Runtime exit', detail: `${label} · execution closed` }
+    case 'payment': return { title: 'Payment authorized', detail: `${label} accepted payload & risk flags` }
+    case 'fraud_check': return { title: 'Fraud check passed', detail: `${label} cleared velocity & device signals` }
+    case 'approval': return { title: 'Strong customer approval', detail: `${label} completed SCA challenge` }
+    case 'settlement': return { title: 'Settlement posted', detail: `${label} handed off to clearing` }
+    case 'retry': return { title: 'Retry scheduled', detail: `${label} queued with backoff` }
+    case 'routing': return { title: 'Route selected', detail: label }
+    case 'wallet': return { title: 'Wallet updated', detail: label }
+    case 'reconciliation': return { title: 'Reconciliation tick', detail: label }
+    default: return { title: 'Step complete', detail: label }
   }
 }
 
@@ -102,9 +96,18 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
   nodeStates: {},
   activeEdgeIds: [],
   timeline: [],
+  activeCaseId: null,
+
+  selectCase: (caseId) => {
+    set({ activeCaseId: caseId })
+    get().reset()
+  },
 
   bindFlow: (flow) => {
     boundFlow = flow
+    // Auto-select the first case if available
+    const cases = flow.simulation?.cases
+    set({ activeCaseId: cases?.[0]?.id ?? null })
     get().reset()
   },
 
@@ -114,36 +117,32 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     if (flow) {
       for (const n of flow.nodes) nodeStates[n.id] = 'idle'
     }
-    set({
-      phase: 'idle',
-      cursor: -1,
-      nodeStates,
-      activeEdgeIds: [],
-      timeline: [],
-    })
+    set({ phase: 'idle', cursor: -1, nodeStates, activeEdgeIds: [], timeline: [] })
   },
 
   start: () => {
     const flow = boundFlow
-    if (!flow?.simulation?.sequence?.length) return
+    if (!flow) return
+    const seq = getSequence(flow, get().activeCaseId)
+    if (!seq.length) return
     get().reset()
     set({ phase: 'running', cursor: -1 })
     get().advanceStep()
   },
 
   pause: () => {
-    const { phase } = get()
-    if (phase === 'running') set({ phase: 'paused' })
+    if (get().phase === 'running') set({ phase: 'paused' })
   },
 
   resume: () => {
-    const { phase } = get()
-    if (phase === 'paused') set({ phase: 'running' })
+    if (get().phase === 'paused') set({ phase: 'running' })
   },
 
   stepForward: () => {
     const flow = boundFlow
-    if (!flow?.simulation?.sequence?.length) return
+    if (!flow) return
+    const seq = getSequence(flow, get().activeCaseId)
+    if (!seq.length) return
     const { phase } = get()
     if (phase === 'idle' || phase === 'completed') {
       get().reset()
@@ -156,20 +155,28 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
 
   advanceStep: () => {
     const flow = boundFlow
-    if (!flow?.simulation?.sequence) return
-    const seq = flow.simulation.sequence
+    if (!flow) return
     const state = get()
     if (state.phase !== 'running') return
+
+    const seq = getSequence(flow, state.activeCaseId)
+    if (!seq.length) return
+
+    const simCase = getActiveCase(flow, state.activeCaseId)
+    const terminalStates = simCase?.terminalStates ?? {}
 
     let { cursor, nodeStates, timeline } = state
     const now = Date.now()
 
+    // Mark previous step done
     if (cursor >= 0 && cursor < seq.length) {
       const completedId = seq[cursor]
-      nodeStates = { ...nodeStates, [completedId]: 'success' }
+      const finalState = terminalStates[completedId] ?? 'success'
+      nodeStates = { ...nodeStates, [completedId]: finalState }
       const node = flow.nodes.find((n) => n.id === completedId)
+      const isFailed = finalState === 'failed'
       const msg = node
-        ? timelineCopyForKind(node.kind, node.label ?? node.id)
+        ? timelineCopyForKind(node.kind, node.label ?? node.id, isFailed)
         : { title: 'Step complete' }
       timeline = [
         ...timeline,
@@ -178,7 +185,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
           at: now,
           title: msg.title,
           detail: msg.detail,
-          tone: 'success' as const,
+          tone: isFailed ? 'error' : 'success',
           nodeId: completedId,
         },
       ]
@@ -186,7 +193,9 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
 
     cursor += 1
 
+    // End of sequence
     if (cursor >= seq.length) {
+      const hasFailures = Object.keys(terminalStates).length > 0
       set({
         cursor,
         nodeStates,
@@ -196,9 +205,9 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
           {
             id: `${now}-done-flow`,
             at: Date.now(),
-            title: 'Settlement completed',
-            detail: 'End-to-end simulation finished',
-            tone: 'success',
+            title: hasFailures ? 'Simulation completed — declined' : 'Settlement completed',
+            detail: hasFailures ? 'End-to-end simulation finished (decline path)' : 'End-to-end simulation finished',
+            tone: hasFailures ? 'error' : 'success',
           },
         ],
         phase: 'completed',
@@ -230,7 +239,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
               id: `${now}-flow-start`,
               at: now,
               title: 'Flow started',
-              detail: flow.name,
+              detail: `${flow.name}${simCase ? ` · ${simCase.label}` : ''}`,
               tone: 'neutral',
             },
             {

@@ -34,10 +34,11 @@ function ElkFitView({ layoutVersion }: { layoutVersion: number }) {
 
   useEffect(() => {
     if (!layoutVersion) return
-    const frame = requestAnimationFrame(() => {
-      fitView({ padding: 0.22, duration: 280 })
-    })
-    return () => cancelAnimationFrame(frame)
+    // Delay slightly so nodes settle before fitting
+    const timer = setTimeout(() => {
+      fitView({ padding: 0.18, duration: 420, minZoom: 0.15 })
+    }, 60)
+    return () => clearTimeout(timer)
   }, [layoutVersion, fitView])
 
   return null
@@ -68,7 +69,7 @@ function FlowCanvasInner() {
     let cancelled = false
 
     const rawNodes: Node[] = flow.nodes.map((n) => {
-      const { width, height } = elkBBoxForKind(n.kind)
+      const { width, height } = elkBBoxForKind(n.kind, n.label)
       return {
         id: n.id,
         type: n.kind,
@@ -95,10 +96,14 @@ function FlowCanvasInner() {
       })
       .catch(() => {
         if (cancelled) return
+        // Organic fallback positions: diagonal cascade with variance
         setElkNodes(
           rawNodes.map((n, i) => ({
             ...n,
-            position: { x: i * 280, y: 48 + (i % 3) * 40 },
+            position: {
+              x: i * 320,
+              y: 120 + (i % 2 === 0 ? -1 : 1) * (i * 22),
+            },
           })),
         )
         setEdgeGeometry({})
@@ -114,7 +119,7 @@ function FlowCanvasInner() {
     if (!elkNodes) return []
     return elkNodes.map((node) => {
       const fn = flow.nodes.find((n) => n.id === node.id)!
-      const { width, height } = elkBBoxForKind(fn.kind)
+      const { width, height } = elkBBoxForKind(fn.kind, fn.label ?? fn.id)
       return {
         ...node,
         type: fn.kind,
@@ -181,7 +186,7 @@ function FlowCanvasInner() {
           onPaneClick={onPaneClick}
           onNodeClick={onNodeClick}
           nodesConnectable={false}
-          nodesDraggable={false}
+          nodesDraggable
           elementsSelectable
           panOnScroll
           zoomOnScroll
@@ -193,10 +198,10 @@ function FlowCanvasInner() {
         >
           <ElkFitView layoutVersion={layoutVersion} />
           <Background
-            variant={BackgroundVariant.Dots}
-            gap={20}
-            size={1.2}
-            color="#334155"
+            variant={BackgroundVariant.Cross}
+            gap={28}
+            size={1.5}
+            color="rgba(51, 65, 85, 0.55)"
           />
           <Controls
             showInteractive={false}

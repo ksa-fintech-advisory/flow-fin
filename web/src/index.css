@@ -215,6 +215,29 @@ body {
   font: inherit;
 }
 
+.ff-case-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.ff-case-picker select {
+  background: rgba(15, 23, 42, 0.95);
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  max-width: 260px;
+}
+
+.ff-case-picker select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .ff-btn {
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.28);
@@ -1073,53 +1096,80 @@ body {
 
 .ff-edge-wire {
   transition:
-    stroke 160ms ease,
-    stroke-width 160ms ease,
-    opacity 160ms ease;
+    stroke 200ms ease,
+    stroke-width 200ms ease,
+    opacity 200ms ease,
+    filter 200ms ease;
 }
 
 .ff-edge-wire--highlight {
-  filter: drop-shadow(0 0 3px rgba(148, 163, 184, 0.35));
+  filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.42));
 }
 
+/* Active wire: animated dash particles along organic curve */
 .ff-edge-wire--active {
-  stroke-dasharray: 7 10;
-  animation: ff-edge-flow 1.05s linear infinite;
-  filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.45));
+  stroke-dasharray: 10 16;
+  animation: ff-edge-flow 0.9s linear infinite;
 }
 
+/* Halo layer: soft radiant glow behind active wire */
+.ff-edge-wire--halo {
+  pointer-events: none;
+  animation: ff-edge-halo-breathe 2.4s ease-in-out infinite;
+}
+
+/* Flow particles: finer trailing dashes that move faster */
 .ff-edge-wire--pulse {
   pointer-events: none;
-  animation: ff-edge-flow 1s linear infinite;
+  stroke-dasharray: 8 14;
+  animation: ff-edge-flow 0.72s linear infinite;
 }
 
 .ff-edge-marker {
-  color: rgba(148, 163, 184, 0.9);
+  transition: fill 200ms ease;
 }
 
-.ff-edge-wire--active + .ff-edge-marker,
-.ff-edge-wire--active {
-  color: #38bdf8;
-}
-
+/* Edge label: compact topology-embedded pill — sits ON the curve path */
 .ff-edge-label {
   position: absolute;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
   font-weight: 600;
-  color: #e2e8f0;
-  background: #1e293b;
-  border: 1px solid rgba(100, 116, 139, 0.55);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.35);
   pointer-events: none;
   white-space: nowrap;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  line-height: 1.5;
 }
 
+/* Active edge label: picks up the electric-blue accent */
+.ff-edge-label--active {
+  color: #bae6fd;
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow:
+    0 2px 10px rgba(56, 189, 248, 0.18),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+
+/* Constant-velocity particle travel along curved path */
 @keyframes ff-edge-flow {
   to {
-    stroke-dashoffset: -68;
+    stroke-dashoffset: -88;
   }
+}
+
+/* Gentle amplitude breathe on halo glow */
+@keyframes ff-edge-halo-breathe {
+  0%, 100% { opacity: 0.14; }
+  50%       { opacity: 0.28; }
 }
 
 /* —— Timeline —— */

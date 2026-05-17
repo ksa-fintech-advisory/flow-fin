@@ -30,7 +30,8 @@ export function OrchestrationBar() {
   const setScenarioId = useGraphStore((s) => s.setScenarioId)
   const phase = useRuntimeStore((s) => s.phase)
   const cursor = useRuntimeStore((s) => s.cursor)
-  const seqLen = flow.simulation?.sequence.length ?? 0
+  const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
+  const selectCase = useRuntimeStore((s) => s.selectCase)
   const speedMultiplier = useUiStore((s) => s.speedMultiplier)
   const setSpeedMultiplier = useUiStore((s) => s.setSpeedMultiplier)
 
@@ -40,6 +41,11 @@ export function OrchestrationBar() {
   const reset = useRuntimeStore((s) => s.reset)
   const stepForward = useRuntimeStore((s) => s.stepForward)
   const advanceStep = useRuntimeStore((s) => s.advanceStep)
+
+  // Resolve the active sequence length from case or fallback
+  const cases = flow.simulation?.cases
+  const activeCase = cases?.find((c) => c.id === activeCaseId) ?? cases?.[0]
+  const seqLen = activeCase?.sequence.length ?? flow.simulation?.sequence.length ?? 0
 
   useEffect(() => {
     if (phase !== 'running') return
@@ -106,6 +112,25 @@ export function OrchestrationBar() {
       </div>
 
       <div className="ff-orchestration__controls">
+        {/* Case picker — shown when scenario has multiple simulation paths */}
+        {cases && cases.length > 1 ? (
+          <label className="ff-case-picker">
+            <span>Case</span>
+            <select
+              value={activeCaseId ?? ''}
+              onChange={(e) => selectCase(e.target.value)}
+              disabled={phase === 'running'}
+              aria-label="Choose simulation case"
+            >
+              {cases.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
         <label className="ff-speed">
           <span>Speed</span>
           <select
