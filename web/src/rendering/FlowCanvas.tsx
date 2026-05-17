@@ -52,6 +52,7 @@ function FlowCanvasInner() {
   const failedEdgeIds = useRuntimeStore((s) => s.failedEdgeIds)
   const failureReason = useRuntimeStore((s) => s.failureReason)
   const nodeFailureMessages = useRuntimeStore((s) => s.nodeFailureMessages)
+  const activeEdgePayloads = useRuntimeStore((s) => s.activeEdgePayloads)
   const bindFlow = useRuntimeStore((s) => s.bindFlow)
 
   const [elkNodes, setElkNodes] = useState<Node[] | null>(null)
@@ -154,11 +155,17 @@ function FlowCanvasInner() {
           selectedNodeId != null &&
           (e.source === selectedNodeId || e.target === selectedNodeId)
         const isFailed = failedEdgeIds.includes(e.id)
-        // Override edge label during failure propagation:
-        // show the decline reason on failed response edges
-        const edgeLabel = isFailed && failureReason
-          ? `decline: ${failureReason.toLowerCase()}`
-          : e.label
+        const isActive = activeEdgeIds.includes(e.id)
+        // Edge label priority during simulation:
+        // 1. Active edge payload (packet data like "AUTH $1,000.00")
+        // 2. Failed edge decline reason ("decline: insufficient balance")
+        // 3. Static edge label from the flow definition
+        let edgeLabel = e.label
+        if (isActive && activeEdgePayloads[e.id]) {
+          edgeLabel = activeEdgePayloads[e.id]
+        } else if (isFailed && failureReason) {
+          edgeLabel = `decline: ${failureReason.toLowerCase()}`
+        }
         return {
           id: e.id,
           source: e.source,
@@ -166,7 +173,7 @@ function FlowCanvasInner() {
           type: 'execution',
           data: {
             label: edgeLabel,
-            active: activeEdgeIds.includes(e.id),
+            active: isActive,
             failed: isFailed,
             highlighted: touchesSelection,
             elkPoints: edgeGeometry[e.id]?.points,
@@ -174,7 +181,7 @@ function FlowCanvasInner() {
           },
         }
       }),
-    [flow.edges, activeEdgeIds, failedEdgeIds, failureReason, edgeGeometry, selectedNodeId, backwardIds],
+    [flow.edges, activeEdgeIds, activeEdgePayloads, failedEdgeIds, failureReason, edgeGeometry, selectedNodeId, backwardIds],
   )
 
   const onPaneClick = useCallback(() => {

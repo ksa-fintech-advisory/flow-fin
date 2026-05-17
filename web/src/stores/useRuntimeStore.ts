@@ -260,6 +260,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         cursor,
         nodeStates,
         activeEdgeIds: [],
+        activeEdgePayloads: {},
         failedEdgeIds, // preserve — keep all red edges visible
         failureReason,
         nodeFailureMessages,
@@ -285,11 +286,17 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     }
     let activeEdgeIds: string[] = []
     let newFailedEdgeIds = [...failedEdgeIds] // cumulative — keep previous
+    let activeEdgePayloads: Record<string, string> = {}
+    const caseEdgePayloads = simCase?.edgePayloads ?? {}
     if (cursor > 0) {
       const prevId = seq[cursor - 1]
       const eid = edgeBetween(flow, prevId, nextId)
       if (eid) {
         activeEdgeIds = [eid]
+        // Attach payload data to active edge (like a network packet)
+        if (caseEdgePayloads[eid]) {
+          activeEdgePayloads[eid] = caseEdgePayloads[eid]
+        }
         // Sticky failure propagation: once any node has been marked 'failed',
         // all subsequent edges accumulate in failedEdgeIds and stay red.
         const anyPriorFailed = seq.slice(0, cursor).some(
@@ -357,6 +364,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       cursor,
       nodeStates: nextStates,
       activeEdgeIds,
+      activeEdgePayloads,
       failedEdgeIds: newFailedEdgeIds,
       failureReason,
       nodeFailureMessages,

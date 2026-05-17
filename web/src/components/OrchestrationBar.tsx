@@ -98,6 +98,11 @@ export function OrchestrationBar() {
         <span className="ff-orchestration__subtitle">
           {SCENARIOS.find((s) => s.id === scenarioId)?.subtitle ?? ''}
         </span>
+        {activeCase?.context ? (
+          <span className="ff-orchestration__context">
+            {activeCase.context}
+          </span>
+        ) : null}
       </div>
 
       <div className="ff-orchestration__status">
