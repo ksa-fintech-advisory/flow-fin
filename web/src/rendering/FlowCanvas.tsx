@@ -19,6 +19,7 @@ import {
   type ElkEdgeGeometry,
   layoutFlowWithElk,
 } from '../layout/applyElkLayout'
+import { FlowFinLogoMark } from '../brand/FlowFinLogo'
 import type { FlowDefinition } from '../fdl/types'
 import { elkBBoxForKind } from '../layout/elkNodeSizes'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
@@ -215,8 +216,10 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
   return (
     <div className="ff-canvas-wrap">
       {!elkNodes ? (
-        <div className="ff-canvas-loading" role="status">
-          Computing ELK layout…
+        <div className="ff-canvas-loading" role="status" aria-live="polite">
+          <FlowFinLogoMark size={36} title="FlowFin" />
+          <p className="ff-canvas-loading__title">Preparing topology layout</p>
+          <p className="ff-canvas-loading__detail">Computing ELK graph coordinates…</p>
         </div>
       ) : (
         <ReactFlow

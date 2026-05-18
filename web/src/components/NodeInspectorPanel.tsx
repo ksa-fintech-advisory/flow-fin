@@ -9,6 +9,7 @@ import {
 import { useGraphStore } from '../stores/useGraphStore'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
 import { useUiStore, type InspectorTab } from '../stores/useUiStore'
+import { FlowFinLogoMark } from '../brand/FlowFinLogo'
 import { NODE_VISUALS } from '../rendering/nodeVisuals'
 import { NodeKindIcon } from '../rendering/nodeIcons'
 
@@ -167,7 +168,7 @@ export function NodeInspectorPanel() {
       <aside className="ff-node-inspector ff-node-inspector--empty">
         <header className="ff-node-inspector__head">
           <div className="ff-node-inspector__empty-brand">
-            <span className="ff-node-inspector__empty-icon">⬡</span>
+            <FlowFinLogoMark size={28} className="ff-node-inspector__empty-icon" />
             <div>
               <h2>Node inspector</h2>
               <p>Select a node to configure integrations, inspect runtime state, and trace execution.</p>

@@ -43,6 +43,50 @@ body {
   border: 0;
 }
 
+.ff-skip-link {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 10000;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.65);
+}
+
+.ff-skip-link:focus {
+  left: 16px;
+  top: 16px;
+  width: auto;
+  height: auto;
+  overflow: visible;
+}
+
+.ff-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ff-brand__mark {
+  flex-shrink: 0;
+  display: block;
+}
+
+.ff-brand__wordmark {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: inherit;
+}
+
 /* —— Orchestration bar —— */
 .ff-orchestration {
   display: grid;
@@ -117,16 +161,20 @@ body {
 }
 
 .ff-orchestration__logo {
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 12px;
-  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
-  transition: color 140ms ease;
+  transition: opacity 140ms ease;
 }
 
 .ff-orchestration__logo:hover {
+  opacity: 0.92;
+}
+
+.ff-orchestration__logo-text {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-size: 13px;
   color: #e2e8f0;
 }
 
@@ -698,11 +746,28 @@ body {
 }
 
 .ff-canvas-loading {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   height: 100%;
   min-height: 420px;
-  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.ff-canvas-loading__title {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e2e8f0;
+  letter-spacing: 0.02em;
+}
+
+.ff-canvas-loading__detail {
+  margin: 0;
+  font-size: 13px;
   color: #94a3b8;
   letter-spacing: 0.02em;
 }
@@ -1582,6 +1647,7 @@ body {
 }
 
 .ff-home__nav,
+.ff-home__main,
 .ff-home__hero,
 .ff-home__capabilities,
 .ff-home__scenarios,
@@ -1610,12 +1676,9 @@ body {
   text-decoration: none;
 }
 
-.ff-home__logo-mark {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  background: linear-gradient(135deg, #38bdf8, #34d399);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+.ff-home__logo-text {
+  font-size: 15px;
+  color: #f8fafc;
 }
 
 .ff-home__nav-links {
@@ -1907,16 +1970,27 @@ body {
 }
 
 .ff-home__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 28px 24px 36px;
   border-top: 1px solid rgba(148, 163, 184, 0.1);
   text-align: center;
 }
 
+.ff-home__footer-brand {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
 .ff-home__footer p {
   margin: 0;
+  max-width: 52ch;
   font-size: 12px;
+  line-height: 1.55;
   color: #64748b;
 }
 
@@ -2201,8 +2275,8 @@ body {
 }
 
 .ff-node-inspector__empty-icon {
-  font-size: 24px;
-  color: #475569;
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 
 .ff-node-inspector__placeholder-rings {

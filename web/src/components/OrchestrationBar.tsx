@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { FlowFinLogo } from '../brand/FlowFinLogo'
 import { SCENARIOS } from '../fdl/scenarios'
 import { useGraphStore } from '../stores/useGraphStore'
 import {
@@ -70,8 +71,8 @@ export function OrchestrationBar() {
     <header className="ff-orchestration">
       <div className="ff-orchestration__brand">
         <div className="ff-orchestration__brand-top">
-          <Link to="/" className="ff-orchestration__logo">
-            FlowFin
+          <Link to="/" className="ff-orchestration__logo" aria-label="FlowFin home">
+            <FlowFinLogo size={22} wordmarkClassName="ff-orchestration__logo-text" />
           </Link>
           <Link to="/" className="ff-btn ff-btn--ghost ff-back-link">
             ← Scenarios
