@@ -19,8 +19,8 @@ import {
   type ElkEdgeGeometry,
   layoutFlowWithElk,
 } from '../layout/applyElkLayout'
+import type { FlowDefinition } from '../fdl/types'
 import { elkBBoxForKind } from '../layout/elkNodeSizes'
-import { useGraphStore } from '../stores/useGraphStore'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
 import { useUiStore } from '../stores/useUiStore'
 import { ExecutionEdge } from './edges/ExecutionEdge'
@@ -44,16 +44,26 @@ function ElkFitView({ layoutVersion }: { layoutVersion: number }) {
   return null
 }
 
-function FlowCanvasInner() {
-  const flow = useGraphStore((s) => s.flow)
+function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
   const selectedNodeId = useUiStore((s) => s.selectedNodeId)
   const nodeStates = useRuntimeStore((s) => s.nodeStates)
   const activeEdgeIds = useRuntimeStore((s) => s.activeEdgeIds)
   const failedEdgeIds = useRuntimeStore((s) => s.failedEdgeIds)
+  const succeededEdgeIds = useRuntimeStore((s) => s.succeededEdgeIds)
   const failureReason = useRuntimeStore((s) => s.failureReason)
   const nodeFailureMessages = useRuntimeStore((s) => s.nodeFailureMessages)
   const activeEdgePayloads = useRuntimeStore((s) => s.activeEdgePayloads)
+  const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
   const bindFlow = useRuntimeStore((s) => s.bindFlow)
+
+  const caseEdgePayloads = useMemo(() => {
+    const cases = flow.simulation?.cases
+    if (!cases?.length) return {}
+    const simCase =
+      (activeCaseId ? cases.find((c) => c.id === activeCaseId) : null) ??
+      cases[0]
+    return simCase?.edgePayloads ?? {}
+  }, [flow, activeCaseId])
 
   const [elkNodes, setElkNodes] = useState<Node[] | null>(null)
   const [edgeGeometry, setEdgeGeometry] = useState<
@@ -67,11 +77,12 @@ function FlowCanvasInner() {
   }, [flow, bindFlow])
 
   useEffect(() => {
-    useUiStore.getState().setSelectedNodeId(null)
-  }, [flow.id])
-
-  useEffect(() => {
     let cancelled = false
+
+    // Reset layout synchronously when the scenario changes.
+    setElkNodes(null)
+    setEdgeGeometry({})
+    setBackwardIds(new Set())
 
     const rawNodes: Node[] = flow.nodes.map((n) => {
       const { width, height } = elkBBoxForKind(n.kind, n.label)
@@ -124,7 +135,10 @@ function FlowCanvasInner() {
 
   const nodes: Node[] = useMemo(() => {
     if (!elkNodes) return []
-    return elkNodes.map((node) => {
+    const flowNodeIds = new Set(flow.nodes.map((n) => n.id))
+    return elkNodes
+      .filter((node) => flowNodeIds.has(node.id))
+      .map((node) => {
       const fn = flow.nodes.find((n) => n.id === node.id)!
       const { width, height } = elkBBoxForKind(fn.kind, fn.label ?? fn.id)
       const runtimeState = nodeStates[node.id] ?? 'idle'
@@ -146,7 +160,7 @@ function FlowCanvasInner() {
         },
       }
     })
-  }, [elkNodes, flow.nodes, nodeStates, selectedNodeId, failureReason, nodeFailureMessages])
+  }, [elkNodes, flow.nodes, nodeStates, selectedNodeId, failureReason, nodeFailureMessages, flow.id])
 
   const edges: Edge[] = useMemo(
     () =>
@@ -155,6 +169,7 @@ function FlowCanvasInner() {
           selectedNodeId != null &&
           (e.source === selectedNodeId || e.target === selectedNodeId)
         const isFailed = failedEdgeIds.includes(e.id)
+        const isSucceeded = succeededEdgeIds.includes(e.id)
         const isActive = activeEdgeIds.includes(e.id)
         // Edge label priority during simulation:
         // 1. Active edge payload (packet data like "AUTH $1,000.00")
@@ -163,8 +178,10 @@ function FlowCanvasInner() {
         let edgeLabel = e.label
         if (isActive && activeEdgePayloads[e.id]) {
           edgeLabel = activeEdgePayloads[e.id]
-        } else if (isFailed && failureReason) {
-          edgeLabel = `decline: ${failureReason.toLowerCase()}`
+        } else if (isFailed) {
+          edgeLabel =
+            caseEdgePayloads[e.id] ??
+            (failureReason ? `decline: ${failureReason.toLowerCase()}` : edgeLabel)
         }
         return {
           id: e.id,
@@ -175,13 +192,14 @@ function FlowCanvasInner() {
             label: edgeLabel,
             active: isActive,
             failed: isFailed,
+            succeeded: isSucceeded,
             highlighted: touchesSelection,
             elkPoints: edgeGeometry[e.id]?.points,
             direction: backwardIds.has(e.id) ? 'response' as const : 'forward' as const,
           },
         }
       }),
-    [flow.edges, activeEdgeIds, activeEdgePayloads, failedEdgeIds, failureReason, edgeGeometry, selectedNodeId, backwardIds],
+    [flow.edges, activeEdgeIds, activeEdgePayloads, caseEdgePayloads, failedEdgeIds, succeededEdgeIds, failureReason, edgeGeometry, selectedNodeId, backwardIds],
   )
 
   const onPaneClick = useCallback(() => {
@@ -251,10 +269,14 @@ function FlowCanvasInner() {
   )
 }
 
-export function FlowCanvas() {
+type FlowCanvasProps = {
+  flow: FlowDefinition
+}
+
+export function FlowCanvas({ flow }: FlowCanvasProps) {
   return (
     <ReactFlowProvider>
-      <FlowCanvasInner />
+      <FlowCanvasInner flow={flow} />
     </ReactFlowProvider>
   )
 }

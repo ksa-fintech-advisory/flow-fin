@@ -19,6 +19,8 @@ export type ExecutionEdgeData = {
   active?: boolean
   /** This edge is carrying a failure/decline signal */
   failed?: boolean
+  /** Response edge that successfully carried approval/settlement */
+  succeeded?: boolean
   highlighted?: boolean
   elkPoints?: { x: number; y: number }[]
   /** Flow direction: 'forward' (request path) or 'response' (backward/return path) */
@@ -31,8 +33,9 @@ export type ExecutionEdgeData = {
  * Visual hierarchy:
  *   idle       → dim slate wire (forward) or tinted amber (response)
  *   highlighted → brightened, slight glow
- *   active     → electric blue, animated flow particles
- *   failed     → red, animated flow particles (decline propagation)
+ *   active     → electric blue (forward) or green (successful response)
+ *   failed     → red dotted, animated flow particles (decline propagation)
+ *   succeeded  → green operational wire (sticky after successful response)
  *
  * Direction-aware coloring:
  *   forward  edges → slate/blue tones (request path)
@@ -73,6 +76,7 @@ export function ExecutionEdge({
 
   const active = Boolean(edgeData?.active)
   const failed = Boolean(edgeData?.failed)
+  const succeeded = Boolean(edgeData?.succeeded)
   const highlighted = Boolean(edgeData?.highlighted) || Boolean(selected)
   const isResponse = direction === 'response'
 
@@ -84,6 +88,7 @@ export function ExecutionEdge({
     'ff-edge-wire',
     active ? 'ff-edge-wire--active' : '',
     failed ? 'ff-edge-wire--failed' : '',
+    succeeded ? 'ff-edge-wire--succeeded' : '',
     highlighted ? 'ff-edge-wire--highlight' : '',
     isResponse ? 'ff-edge-wire--response' : '',
   ]
@@ -96,48 +101,79 @@ export function ExecutionEdge({
   const responseBase = 'rgba(196, 167, 125, 0.65)'
   const responseHighlight = 'rgba(217, 189, 149, 0.92)'
   const activeColor = '#38bdf8'
-  const failedColor = '#f87171'   // red-400
+  const failedColor = '#f87171'
+  const failedMuted = 'rgba(248, 113, 113, 0.82)'
+  const succeededColor = '#34d399'   // emerald-400
+  const succeededMuted = 'rgba(52, 211, 153, 0.72)'
 
-  const baseColor = isResponse ? responseBase : forwardBase
-  const highlightColor = isResponse ? responseHighlight : forwardHighlight
+  const baseColor = failed
+    ? failedMuted
+    : succeeded
+      ? succeededMuted
+      : isResponse
+        ? responseBase
+        : forwardBase
+  const highlightColor = failed
+    ? 'rgba(252, 165, 165, 0.95)'
+    : succeeded
+      ? 'rgba(110, 231, 183, 0.92)'
+      : isResponse
+        ? responseHighlight
+        : forwardHighlight
 
-  // Failed overrides active color
-  const resolvedActiveColor = failed ? failedColor : activeColor
+  const resolvedActiveColor = failed
+    ? failedColor
+    : succeeded
+      ? succeededColor
+      : activeColor
   const strokeColor = active
     ? resolvedActiveColor
-    : highlighted
-      ? highlightColor
-      : baseColor
-  const strokeWidth = active ? 2.5 : highlighted ? 1.8 : 1.4
+    : failed
+      ? failedMuted
+      : highlighted
+        ? highlightColor
+        : baseColor
+  const strokeWidth = active ? 2.5 : failed ? 2 : highlighted ? 1.8 : succeeded ? 1.6 : 1.4
 
-  // Arrow marker color
   const markerColor = active
     ? resolvedActiveColor
-    : highlighted
-      ? highlightColor
-      : isResponse
-        ? 'rgba(196, 167, 125, 0.8)'
-        : 'rgba(100, 116, 139, 0.8)'
+    : failed
+      ? failedMuted
+      : highlighted
+        ? highlightColor
+        : succeeded
+          ? succeededMuted
+          : isResponse
+            ? 'rgba(196, 167, 125, 0.8)'
+            : 'rgba(100, 116, 139, 0.8)'
 
-  // Edge label accent
-  const labelBorder = active
-    ? failed
-      ? 'rgba(248, 113, 113, 0.4)'
-      : 'rgba(56, 189, 248, 0.4)'
-    : highlighted
-      ? isResponse
-        ? 'rgba(217, 189, 149, 0.5)'
-        : 'rgba(148, 163, 184, 0.5)'
-      : isResponse
-        ? 'rgba(196, 167, 125, 0.35)'
-        : 'rgba(100, 116, 139, 0.35)'
+  const labelBorder = failed
+    ? 'rgba(248, 113, 113, 0.45)'
+    : active
+      ? succeeded
+        ? 'rgba(52, 211, 153, 0.45)'
+        : 'rgba(56, 189, 248, 0.4)'
+      : highlighted
+        ? succeeded
+          ? 'rgba(52, 211, 153, 0.5)'
+          : isResponse
+            ? 'rgba(217, 189, 149, 0.5)'
+            : 'rgba(148, 163, 184, 0.5)'
+        : succeeded
+          ? 'rgba(52, 211, 153, 0.38)'
+          : isResponse
+            ? 'rgba(196, 167, 125, 0.35)'
+            : 'rgba(100, 116, 139, 0.35)'
 
-  // Dashed stroke for response edges — visual "return path" cue
-  const strokeDasharray = isResponse && !active ? '6 4' : undefined
+  // Failed response → dotted decline; successful response → solid operational green
+  const strokeDasharray = failed
+    ? '6 4'
+    : isResponse && !active && !succeeded
+      ? '6 4'
+      : undefined
 
-  // Halo color: red for failed, blue for normal active
-  const haloColor = failed ? '#f87171' : '#38bdf8'
-  const pulseColor = failed ? '#fecaca' : '#e0f2fe'
+  const haloColor = failed ? '#f87171' : succeeded ? '#34d399' : '#38bdf8'
+  const pulseColor = failed ? '#fecaca' : succeeded ? '#d1fae5' : '#e0f2fe'
 
   return (
     <>
@@ -177,7 +213,7 @@ export function ExecutionEdge({
         className="ff-edge-hit"
       />
 
-      {/* Ambient halo: active edges (blue or red for failure) */}
+      {/* Ambient halo: active edges (blue, green, or red) */}
       {active && (
         <path
           d={path}
@@ -218,7 +254,7 @@ export function ExecutionEdge({
           strokeWidth={2.2}
           strokeDasharray="8 14"
           strokeLinecap="round"
-          className={`ff-edge-wire--pulse ${failed ? 'ff-edge-wire--pulse-failed' : ''}`}
+          className={`ff-edge-wire--pulse ${failed ? 'ff-edge-wire--pulse-failed' : ''} ${succeeded ? 'ff-edge-wire--pulse-succeeded' : ''}`}
           style={{ opacity: 0.88 }}
         />
       )}
@@ -227,7 +263,7 @@ export function ExecutionEdge({
       {edgeData?.label ? (
         <EdgeLabelRenderer>
           <div
-            className={`ff-edge-label ${active ? (failed ? 'ff-edge-label--failed' : 'ff-edge-label--active') : ''} ${isResponse ? 'ff-edge-label--response' : ''}`}
+            className={`ff-edge-label ${failed ? 'ff-edge-label--failed' : succeeded ? 'ff-edge-label--succeeded' : active ? 'ff-edge-label--active' : ''} ${isResponse && !succeeded && !failed ? 'ff-edge-label--response' : ''}`}
             style={{
               transform: `translate(-50%, -50%) translate(${labelPos.x}px, ${labelPos.y}px)`,
               borderColor: labelBorder,

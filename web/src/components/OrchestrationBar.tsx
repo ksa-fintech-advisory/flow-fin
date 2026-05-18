@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { SCENARIOS } from '../fdl/scenarios'
 import { useGraphStore } from '../stores/useGraphStore'
 import {
@@ -25,9 +25,11 @@ function phaseLabel(phase: SimulationPhase): string {
 
 export function OrchestrationBar() {
   const navigate = useNavigate()
-  const flow = useGraphStore((s) => s.flow)
-  const scenarioId = useGraphStore((s) => s.scenarioId)
+  const { scenarioId: routeScenarioId } = useParams<{ scenarioId: string }>()
   const setScenarioId = useGraphStore((s) => s.setScenarioId)
+  const flow = useGraphStore((s) => s.flow)
+  const storeScenarioId = useGraphStore((s) => s.scenarioId)
+  const scenarioId = routeScenarioId ?? storeScenarioId
   const phase = useRuntimeStore((s) => s.phase)
   const cursor = useRuntimeStore((s) => s.cursor)
   const activeCaseId = useRuntimeStore((s) => s.activeCaseId)

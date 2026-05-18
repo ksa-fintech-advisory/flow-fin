@@ -182,7 +182,7 @@ function buildPortAssignments(
  * A backward edge is one whose target also sends an edge back to its source
  * (bidirectional pair) OR whose source appears later in topological order.
  */
-function detectBackwardEdges(edges: Edge[]): Set<string> {
+export function detectBackwardEdges(edges: Edge[]): Set<string> {
   const backward = new Set<string>()
 
   // Build adjacency: which (source,target) pairs exist

@@ -5,6 +5,7 @@ import type {
   RuntimeNodeState,
   SimulationCase,
 } from '../fdl/types'
+import { detectBackwardEdges } from '../layout/applyElkLayout'
 
 export type SimulationPhase = 'idle' | 'running' | 'paused' | 'completed'
 
@@ -27,6 +28,11 @@ interface RuntimeStore {
    * Edges stay in this list after traversal so they remain visually red.
    */
   failedEdgeIds: string[]
+  /**
+   * Response edges that successfully carried an approval/settlement signal.
+   * Stays visible after traversal (green operational path).
+   */
+  succeededEdgeIds: string[]
   /**
    * The active failure reason (set when a node fails).
    * Carried on edge labels during decline propagation.
@@ -57,6 +63,7 @@ interface RuntimeStore {
 }
 
 let boundFlow: FlowDefinition | null = null
+let responseEdgeIds: Set<string> = new Set()
 
 function getActiveCase(flow: FlowDefinition, caseId: string | null): SimulationCase | null {
   const cases = flow.simulation?.cases
@@ -113,13 +120,14 @@ function timelineCopyForKind(
 
 const INITIAL_RUNTIME: Pick<
   RuntimeStore,
-  'phase' | 'cursor' | 'nodeStates' | 'activeEdgeIds' | 'failedEdgeIds' | 'failureReason' | 'nodeFailureMessages' | 'activeEdgePayloads' | 'timeline'
+  'phase' | 'cursor' | 'nodeStates' | 'activeEdgeIds' | 'failedEdgeIds' | 'succeededEdgeIds' | 'failureReason' | 'nodeFailureMessages' | 'activeEdgePayloads' | 'timeline'
 > = {
   phase: 'idle',
   cursor: -1,
   nodeStates: {},
   activeEdgeIds: [],
   failedEdgeIds: [],
+  succeededEdgeIds: [],
   failureReason: null,
   nodeFailureMessages: {},
   activeEdgePayloads: {},
@@ -137,6 +145,13 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
 
   bindFlow: (flow) => {
     boundFlow = flow
+    responseEdgeIds = detectBackwardEdges(
+      flow.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+      })),
+    )
     // Auto-select the first case if available
     const cases = flow.simulation?.cases
     set({ activeCaseId: cases?.[0]?.id ?? null })
@@ -199,7 +214,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     const caseFailureReason = simCase?.failureReason ?? null
     const caseFailureMessages = simCase?.failureMessages ?? {}
 
-    let { cursor, nodeStates, timeline, failedEdgeIds, failureReason, nodeFailureMessages } = state
+    let { cursor, nodeStates, timeline, failedEdgeIds, succeededEdgeIds, failureReason, nodeFailureMessages } = state
     const now = Date.now()
 
     // Mark previous step done
@@ -246,6 +261,14 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
           nodeId: completedId,
         },
       ]
+
+      // Sticky decline: mark the inbound edge when a node fails.
+      if (isFailed && cursor > 0) {
+        const inboundId = edgeBetween(flow, seq[cursor - 1]!, completedId)
+        if (inboundId && !failedEdgeIds.includes(inboundId)) {
+          failedEdgeIds = [...failedEdgeIds, inboundId]
+        }
+      }
     }
 
     cursor += 1
@@ -262,6 +285,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         activeEdgeIds: [],
         activeEdgePayloads: {},
         failedEdgeIds, // preserve — keep all red edges visible
+        succeededEdgeIds, // preserve — keep green response path visible
         failureReason,
         nodeFailureMessages,
         timeline: [
@@ -286,6 +310,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     }
     let activeEdgeIds: string[] = []
     let newFailedEdgeIds = [...failedEdgeIds] // cumulative — keep previous
+    let newSucceededEdgeIds = [...succeededEdgeIds]
     let activeEdgePayloads: Record<string, string> = {}
     const caseEdgePayloads = simCase?.edgePayloads ?? {}
     if (cursor > 0) {
@@ -297,13 +322,21 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         if (caseEdgePayloads[eid]) {
           activeEdgePayloads[eid] = caseEdgePayloads[eid]
         }
-        // Sticky failure propagation: once any node has been marked 'failed',
-        // all subsequent edges accumulate in failedEdgeIds and stay red.
         const anyPriorFailed = seq.slice(0, cursor).some(
           (nid) => nodeStates[nid] === 'failed',
         )
-        if (anyPriorFailed && !newFailedEdgeIds.includes(eid)) {
+        const inDeclinePath = failureReason !== null || anyPriorFailed
+        // Sticky failure propagation: decline path edges stay red after completion.
+        if (inDeclinePath && !newFailedEdgeIds.includes(eid)) {
           newFailedEdgeIds = [...newFailedEdgeIds, eid]
+        }
+        // Successful response edges stay green after traversal.
+        if (
+          !inDeclinePath &&
+          responseEdgeIds.has(eid) &&
+          !newSucceededEdgeIds.includes(eid)
+        ) {
+          newSucceededEdgeIds = [...newSucceededEdgeIds, eid]
         }
       }
     }
@@ -366,6 +399,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       activeEdgeIds,
       activeEdgePayloads,
       failedEdgeIds: newFailedEdgeIds,
+      succeededEdgeIds: newSucceededEdgeIds,
       failureReason,
       nodeFailureMessages,
       timeline: [...timeline, ...appended],
