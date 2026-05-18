@@ -49,7 +49,6 @@ function ElkFitView({ layoutVersion }: { layoutVersion: number }) {
 
 function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
   const selectedNodeId = useUiStore((s) => s.selectedNodeId)
-  const inspectorCollapsed = useUiStore((s) => s.inspectorCollapsed)
   const nodeStates = useRuntimeStore((s) => s.nodeStates)
   const activeEdgeIds = useRuntimeStore((s) => s.activeEdgeIds)
   const failedEdgeIds = useRuntimeStore((s) => s.failedEdgeIds)
@@ -286,9 +285,7 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
               <span className="ff-runtime-chip__label">{phase}</span>
             </div>
             {selectedNodeId ? (
-              <span className="ff-canvas-overlay__hint">
-                {inspectorCollapsed ? 'Node selected · expand inspector →' : 'Inspector open · Esc to clear'}
-              </span>
+              <span className="ff-canvas-overlay__hint">Inspector open · Esc to clear</span>
             ) : (
               <span className="ff-canvas-overlay__hint">Click node to inspect</span>
             )}

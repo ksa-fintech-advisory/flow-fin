@@ -397,7 +397,7 @@ export function NodeInspectorPanel() {
               <RuntimeLogStream
                 logs={context.displayLogs}
                 live={isLive}
-                maxHeight={260}
+                embedded
                 emptyMessage="Run simulation to stream node logs"
               />
             </section>
@@ -495,7 +495,7 @@ export function NodeInspectorPanel() {
               <RuntimeLogStream
                 logs={context.displayLogs}
                 live={isLive}
-                maxHeight={420}
+                embedded
                 emptyMessage="No operational logs — start a simulation run"
               />
             </section>

@@ -5,6 +5,8 @@ type RuntimeLogStreamProps = {
   logs: RuntimeLogEntry[]
   emptyMessage?: string
   live?: boolean
+  /** When true, logs scroll with the parent panel instead of a nested scroll area. */
+  embedded?: boolean
   maxHeight?: number
 }
 
@@ -22,15 +24,24 @@ export function RuntimeLogStream({
   logs,
   emptyMessage = 'Waiting for runtime activity…',
   live = false,
+  embedded = false,
   maxHeight = 220,
 }: RuntimeLogStreamProps) {
   const tailRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
+    if (!live) return
     const el = tailRef.current
-    if (!el || !live) return
+    if (!el) return
+    if (embedded) {
+      const panel = el.closest('.ff-node-inspector__body')
+      if (panel instanceof HTMLElement) {
+        panel.scrollTop = panel.scrollHeight
+      }
+      return
+    }
     el.scrollTop = el.scrollHeight
-  }, [logs, live])
+  }, [logs, live, embedded])
 
   return (
     <div className="ff-runtime-log-stream">
@@ -42,8 +53,8 @@ export function RuntimeLogStream({
       ) : null}
       <ul
         ref={tailRef}
-        className="ff-runtime-logs ff-runtime-logs--stream"
-        style={{ maxHeight }}
+        className={`ff-runtime-logs ff-runtime-logs--stream${embedded ? ' ff-runtime-logs--embedded' : ''}`}
+        style={embedded ? undefined : { maxHeight }}
       >
         {logs.length === 0 ? (
           <li className="ff-runtime-logs__empty">{emptyMessage}</li>

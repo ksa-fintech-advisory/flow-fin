@@ -54,7 +54,6 @@ function PlaygroundContent() {
   }
 
   const meta = playgroundMeta(scenario.id, scenario.title, scenario.subtitle)
-  const inspectorCollapsed = useUiStore((s) => s.inspectorCollapsed)
 
   return (
     <div className="ff-shell ff-playground">
@@ -62,11 +61,7 @@ function PlaygroundContent() {
       <SkipLink />
       <OrchestrationBar />
       <PlaygroundScenarioStrip />
-      <main
-        id="main-content"
-        className={`ff-main ff-playground__main${inspectorCollapsed ? ' ff-playground__main--inspector-collapsed' : ''}`}
-        aria-label="Runtime topology playground"
-      >
+      <main id="main-content" className="ff-main ff-playground__main" aria-label="Runtime topology playground">
         <FlowCanvas key={scenarioId} flow={flow} />
         <RuntimeSidebar />
       </main>

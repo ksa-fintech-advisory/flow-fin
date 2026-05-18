@@ -448,124 +448,28 @@ body {
 .ff-playground .ff-main,
 .ff-playground__main {
   grid-template-columns: 1fr minmax(300px, 380px);
-  transition: grid-template-columns 220ms ease;
-}
-
-.ff-playground__main--inspector-collapsed {
-  grid-template-columns: 1fr 44px;
-}
-
-.ff-sidebar--inspect .ff-node-inspector {
-  flex: 1 1 62%;
-  max-height: none;
-  min-height: 280px;
-}
-
-.ff-sidebar--inspect .ff-timeline {
-  flex: 0 1 38%;
-  min-height: 160px;
 }
 
 .ff-sidebar {
-  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   min-width: 0;
   border-left: 1px solid rgba(148, 163, 184, 0.15);
   background: rgba(10, 14, 26, 0.72);
-  transition:
-    width 220ms ease,
-    min-width 220ms ease;
-}
-
-/* Edge rail toggle — common IDE / app shell panel control */
-.ff-sidebar__rail-toggle {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  z-index: 5;
-  transform: translate(-50%, -50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.98);
-  color: #94a3b8;
-  cursor: pointer;
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.8),
-    0 4px 16px rgba(0, 0, 0, 0.4);
-  transition:
-    color 140ms ease,
-    border-color 140ms ease,
-    background 140ms ease,
-    box-shadow 140ms ease;
-}
-
-.ff-sidebar__rail-toggle:hover {
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.5);
-  background: rgba(30, 41, 59, 1);
-  box-shadow:
-    0 0 0 1px rgba(56, 189, 248, 0.15),
-    0 4px 20px rgba(0, 0, 0, 0.45);
-}
-
-.ff-sidebar__rail-toggle:active {
-  transform: translate(-50%, -50%) scale(0.96);
-}
-
-.ff-sidebar__rail-toggle:focus-visible {
-  outline: 2px solid rgba(56, 189, 248, 0.55);
-  outline-offset: 2px;
-}
-
-.ff-sidebar__toggle-svg {
-  display: block;
-  flex-shrink: 0;
-}
-
-.ff-sidebar__panels {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-}
-
-.ff-sidebar--collapsed {
-  align-items: center;
-  justify-content: center;
-}
-
-.ff-sidebar--collapsed .ff-sidebar__rail-toggle {
-  position: relative;
-  left: auto;
-  top: auto;
-  transform: none;
-  margin: auto 0;
-}
-
-.ff-sidebar--collapsed .ff-sidebar__rail-toggle:active {
-  transform: scale(0.96);
 }
 
 .ff-node-inspector {
   display: flex;
+  flex: 1 1 58%;
   flex-direction: column;
   min-height: 0;
-  max-height: 52%;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .ff-node-inspector--empty {
-  max-height: none;
   flex: 0 0 auto;
+  min-height: 0;
 }
 
 .ff-node-inspector__head {
@@ -669,8 +573,11 @@ body {
 
 .ff-node-inspector__body {
   flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 12px 14px 16px;
+  overscroll-behavior: contain;
 }
 
 .ff-detail-section {
@@ -841,8 +748,9 @@ body {
 }
 
 .ff-sidebar .ff-timeline {
-  flex: 1;
-  min-height: 0;
+  flex: 0 1 42%;
+  min-height: 140px;
+  max-height: 42%;
   border-left: none;
   background: transparent;
 }
@@ -1566,9 +1474,11 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .ff-timeline__head {
+  flex-shrink: 0;
   padding: 16px 18px 12px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
 }
@@ -1607,10 +1517,14 @@ body {
   list-style: none;
   margin: 0;
   padding: 12px 12px 18px;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overscroll-behavior: contain;
 }
 
 .ff-timeline__item {
@@ -2963,6 +2877,11 @@ body {
   overflow-y: auto;
 }
 
+.ff-runtime-logs--embedded {
+  max-height: none;
+  overflow: visible;
+}
+
 .ff-runtime-logs__line {
   padding: 8px 10px;
   border-bottom: 1px solid rgba(51, 65, 85, 0.4);
@@ -3158,10 +3077,6 @@ body {
   .ff-playground .ff-main,
   .ff-playground__main {
     grid-template-columns: 1fr minmax(260px, 320px);
-  }
-
-  .ff-playground__main--inspector-collapsed {
-    grid-template-columns: 1fr 44px;
   }
 
   .ff-scenario-chip {
