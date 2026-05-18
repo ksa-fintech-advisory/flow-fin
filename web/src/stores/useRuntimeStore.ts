@@ -6,6 +6,13 @@ import type {
   SimulationCase,
 } from '../fdl/types'
 import { detectBackwardEdges } from '../layout/applyElkLayout'
+import {
+  completeLogsForKind,
+  enterLogsForKind,
+  runningTickLog,
+  timeoutWarningLog,
+  type RuntimeLogEntry,
+} from '../runtime/mockNodeLogs'
 
 export type SimulationPhase = 'idle' | 'running' | 'paused' | 'completed'
 
@@ -16,6 +23,13 @@ export interface TimelineEntry {
   detail?: string
   tone: 'neutral' | 'success' | 'warn' | 'error'
   nodeId?: string
+}
+
+export interface NodeRuntimeTiming {
+  startedAt?: number
+  completedAt?: number
+  durationMs?: number
+  attempt: number
 }
 
 interface RuntimeStore {
@@ -49,9 +63,17 @@ interface RuntimeStore {
    */
   activeEdgePayloads: Record<string, string>
   timeline: TimelineEntry[]
+  /** Per-node operational log stream (mock runtime). */
+  nodeLogs: Record<string, RuntimeLogEntry[]>
+  /** Per-node timing and retry metadata for the inspector. */
+  nodeTiming: Record<string, NodeRuntimeTiming>
+  /** Tick counter per running node for rotating in-flight logs. */
+  runningLogTicks: Record<string, number>
   /** Currently selected simulation case id */
   activeCaseId: string | null
 
+  appendNodeLogs: (nodeId: string, entries: RuntimeLogEntry[]) => void
+  pushRunningLogTicks: () => void
   bindFlow: (flow: FlowDefinition) => void
   reset: () => void
   start: () => void
@@ -120,7 +142,19 @@ function timelineCopyForKind(
 
 const INITIAL_RUNTIME: Pick<
   RuntimeStore,
-  'phase' | 'cursor' | 'nodeStates' | 'activeEdgeIds' | 'failedEdgeIds' | 'succeededEdgeIds' | 'failureReason' | 'nodeFailureMessages' | 'activeEdgePayloads' | 'timeline'
+  | 'phase'
+  | 'cursor'
+  | 'nodeStates'
+  | 'activeEdgeIds'
+  | 'failedEdgeIds'
+  | 'succeededEdgeIds'
+  | 'failureReason'
+  | 'nodeFailureMessages'
+  | 'activeEdgePayloads'
+  | 'timeline'
+  | 'nodeLogs'
+  | 'nodeTiming'
+  | 'runningLogTicks'
 > = {
   phase: 'idle',
   cursor: -1,
@@ -132,11 +166,57 @@ const INITIAL_RUNTIME: Pick<
   nodeFailureMessages: {},
   activeEdgePayloads: {},
   timeline: [],
+  nodeLogs: {},
+  nodeTiming: {},
+  runningLogTicks: {},
+}
+
+function mergeNodeLogs(
+  existing: Record<string, RuntimeLogEntry[]>,
+  nodeId: string,
+  entries: RuntimeLogEntry[],
+): Record<string, RuntimeLogEntry[]> {
+  if (!entries.length) return existing
+  const prev = existing[nodeId] ?? []
+  return { ...existing, [nodeId]: [...prev, ...entries].slice(-48) }
 }
 
 export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
   ...INITIAL_RUNTIME,
   activeCaseId: null,
+
+  appendNodeLogs: (nodeId, entries) => {
+    if (!entries.length) return
+    set((s) => ({
+      nodeLogs: mergeNodeLogs(s.nodeLogs, nodeId, entries),
+    }))
+  },
+
+  pushRunningLogTicks: () => {
+    const flow = boundFlow
+    if (!flow || get().phase !== 'running') return
+
+    const { nodeStates, runningLogTicks, nodeLogs } = get()
+    let nextLogs = nodeLogs
+    let nextTicks = { ...runningLogTicks }
+    let hasRunning = false
+
+    for (const n of flow.nodes) {
+      if (nodeStates[n.id] !== 'running') continue
+      hasRunning = true
+      const tick = (runningLogTicks[n.id] ?? 0) + 1
+      nextTicks[n.id] = tick
+      const log = runningTickLog(n.kind, n.id, n.label ?? n.id, tick)
+      if (log) nextLogs = mergeNodeLogs(nextLogs, n.id, [log])
+      if (tick === 4) {
+        nextLogs = mergeNodeLogs(nextLogs, n.id, [timeoutWarningLog(n.id, n.kind)])
+      }
+    }
+
+    if (hasRunning) {
+      set({ nodeLogs: nextLogs, runningLogTicks: nextTicks })
+    }
+  },
 
   selectCase: (caseId) => {
     set({ activeCaseId: caseId })
@@ -214,7 +294,18 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     const caseFailureReason = simCase?.failureReason ?? null
     const caseFailureMessages = simCase?.failureMessages ?? {}
 
-    let { cursor, nodeStates, timeline, failedEdgeIds, succeededEdgeIds, failureReason, nodeFailureMessages } = state
+    let {
+      cursor,
+      nodeStates,
+      timeline,
+      failedEdgeIds,
+      succeededEdgeIds,
+      failureReason,
+      nodeFailureMessages,
+      nodeLogs,
+      nodeTiming,
+      runningLogTicks,
+    } = state
     const now = Date.now()
 
     // Mark previous step done
@@ -262,6 +353,33 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         },
       ]
 
+      if (node) {
+        const priorTiming = nodeTiming[completedId]
+        const startedAt = priorTiming?.startedAt ?? now - 400
+        nodeTiming = {
+          ...nodeTiming,
+          [completedId]: {
+            startedAt,
+            completedAt: now,
+            durationMs: now - startedAt,
+            attempt: priorTiming?.attempt ?? 1,
+          },
+        }
+        nodeLogs = mergeNodeLogs(
+          nodeLogs,
+          completedId,
+          completeLogsForKind(
+            node.kind,
+            completedId,
+            node.label ?? completedId,
+            finalState,
+            isFailed ? nodeMsg : undefined,
+          ),
+        )
+        const { [completedId]: _, ...restTicks } = runningLogTicks
+        runningLogTicks = restTicks
+      }
+
       // Sticky decline: mark the inbound edge when a node fails.
       if (isFailed && cursor > 0) {
         const inboundId = edgeBetween(flow, seq[cursor - 1]!, completedId)
@@ -288,6 +406,9 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         succeededEdgeIds, // preserve — keep green response path visible
         failureReason,
         nodeFailureMessages,
+        nodeLogs,
+        nodeTiming,
+        runningLogTicks,
         timeline: [
           ...timeline,
           {
@@ -393,6 +514,26 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
             },
           ]
 
+    if (node) {
+      const attempt =
+        node.kind === 'retry'
+          ? (nodeTiming[nextId]?.attempt ?? 0) + 1
+          : nodeTiming[nextId]?.attempt ?? 1
+      nodeTiming = {
+        ...nodeTiming,
+        [nextId]: { startedAt: now, attempt },
+      }
+      nodeLogs = mergeNodeLogs(
+        nodeLogs,
+        nextId,
+        enterLogsForKind(node.kind, nextId, node.label ?? nextId, {
+          declinePath: isInFailurePropagation,
+          failureReason,
+        }),
+      )
+      runningLogTicks = { ...runningLogTicks, [nextId]: 0 }
+    }
+
     set({
       cursor,
       nodeStates: nextStates,
@@ -402,6 +543,9 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       succeededEdgeIds: newSucceededEdgeIds,
       failureReason,
       nodeFailureMessages,
+      nodeLogs,
+      nodeTiming,
+      runningLogTicks,
       timeline: [...timeline, ...appended],
     })
   },

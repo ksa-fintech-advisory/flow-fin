@@ -6,17 +6,19 @@ import {
   roleForKind,
   samplePayloadForKind,
 } from '../fdl/nodeSemantics'
+import { standbyLogsForKind } from '../runtime/mockNodeLogs'
 import { useGraphStore } from '../stores/useGraphStore'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
 import { useUiStore, type InspectorTab } from '../stores/useUiStore'
 import { FlowFinLogoMark } from '../brand/FlowFinLogo'
 import { NODE_VISUALS } from '../rendering/nodeVisuals'
 import { NodeKindIcon } from '../rendering/nodeIcons'
+import { RuntimeLogStream } from './RuntimeLogStream'
 
 const TABS: { id: InspectorTab; label: string }[] = [
+  { id: 'runtime', label: 'Runtime' },
   { id: 'overview', label: 'Overview' },
   { id: 'config', label: 'Config' },
-  { id: 'runtime', label: 'Runtime' },
   { id: 'logs', label: 'Logs' },
 ]
 
@@ -39,6 +41,12 @@ function healthLabel(state: string): { label: string; tone: string } {
     default:
       return { label: 'Standby', tone: 'idle' }
   }
+}
+
+function formatDuration(ms?: number): string {
+  if (ms == null) return '—'
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(2)}s`
 }
 
 function EdgeList({
@@ -109,6 +117,11 @@ export function NodeInspectorPanel() {
   const timeline = useRuntimeStore((s) => s.timeline)
   const activeEdgePayloads = useRuntimeStore((s) => s.activeEdgePayloads)
   const cursor = useRuntimeStore((s) => s.cursor)
+  const nodeLogs = useRuntimeStore((s) => s.nodeLogs)
+  const nodeTiming = useRuntimeStore((s) => s.nodeTiming)
+  const failureReason = useRuntimeStore((s) => s.failureReason)
+  const nodeFailureMessages = useRuntimeStore((s) => s.nodeFailureMessages)
+  const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
 
   const node = selectedId ? flow.nodes.find((n) => n.id === selectedId) : undefined
 
@@ -117,51 +130,72 @@ export function NodeInspectorPanel() {
 
     const incoming = flow.edges.filter((e) => e.target === node.id)
     const outgoing = flow.edges.filter((e) => e.source === node.id)
-    const seq = flow.simulation?.sequence ?? []
-    const seqIndex = seq.indexOf(node.id)
+    const cases = flow.simulation?.cases
+    const activeCase =
+      cases?.find((c) => c.id === activeCaseId) ?? cases?.[0] ?? null
+    const caseSeq = activeCase?.sequence ?? flow.simulation?.sequence ?? []
+    const seqIndex = caseSeq.indexOf(node.id)
     const role = roleForKind(node.kind)
     const ops = operationalDetailsForKind(node.kind, node.id)
     const configGroups = inspectorConfigForKind(node.kind, node.id)
     const payload = samplePayloadForKind(node.kind, node.id)
     const runtimeState = nodeStates[node.id] ?? 'idle'
     const health = healthLabel(runtimeState)
+    const timing = nodeTiming[node.id]
 
     const relatedEvents = timeline.filter((ev) => ev.nodeId === node.id)
-    const activePayload = Object.values(activeEdgePayloads).find(Boolean)
+    const inboundPayload = incoming
+      .map((e) => activeEdgePayloads[e.id])
+      .find(Boolean)
+    const outboundPayload = outgoing
+      .map((e) => activeEdgePayloads[e.id])
+      .find(Boolean)
+    const activePayload = inboundPayload ?? outboundPayload ?? Object.values(activeEdgePayloads).find(Boolean)
 
-    const runtimeLogs = relatedEvents.map((ev) => ({
-      at: ev.at,
-      level: ev.tone === 'error' ? 'error' : ev.tone === 'warn' ? 'warn' : 'info',
-      message: ev.title,
-      detail: ev.detail,
-    }))
+    const storedLogs = nodeLogs[node.id] ?? []
+    const displayLogs =
+      storedLogs.length > 0
+        ? storedLogs
+        : runtimeState === 'idle'
+          ? standbyLogsForKind(node.kind, node.id, node.label ?? node.id)
+          : storedLogs
 
-    if (runtimeState === 'running' && runtimeLogs.length === 0) {
-      runtimeLogs.push({
-        at: Date.now(),
-        level: 'info',
-        message: 'Node armed',
-        detail: 'Awaiting propagation tick',
-      })
-    }
+    const nodeFailure = nodeFailureMessages[node.id]
+    const isOnDeclinePath = failureReason != null && (runtimeState === 'failed' || nodeFailure != null)
 
     return {
       incoming,
       outgoing,
       seqIndex,
-      seqTotal: seq.length,
+      seqTotal: caseSeq.length,
       role,
       ops,
       configGroups,
       payload,
       runtimeState,
       health,
-      relatedEvents: relatedEvents.slice(-6).reverse(),
-      runtimeLogs,
+      relatedEvents: relatedEvents.slice(-8).reverse(),
+      displayLogs,
       activePayload,
       stepLabel: cursor < 0 ? '—' : String(cursor + 1),
+      timing,
+      nodeFailure,
+      isOnDeclinePath,
+      failureReason,
     }
-  }, [node, flow, nodeStates, timeline, activeEdgePayloads, cursor])
+  }, [
+    node,
+    flow,
+    nodeStates,
+    timeline,
+    activeEdgePayloads,
+    cursor,
+    nodeLogs,
+    nodeTiming,
+    failureReason,
+    nodeFailureMessages,
+    activeCaseId,
+  ])
 
   if (!node || !context) {
     return (
@@ -171,7 +205,7 @@ export function NodeInspectorPanel() {
             <FlowFinLogoMark size={28} className="ff-node-inspector__empty-icon" />
             <div>
               <h2>Node inspector</h2>
-              <p>Select a node to configure integrations, inspect runtime state, and trace execution.</p>
+              <p>Select a node to inspect runtime traces, payloads, and operational logs.</p>
             </div>
           </div>
         </header>
@@ -185,6 +219,7 @@ export function NodeInspectorPanel() {
   }
 
   const visual = NODE_VISUALS[node.kind]
+  const isLive = context.runtimeState === 'running'
 
   return (
     <aside
@@ -244,6 +279,131 @@ export function NodeInspectorPanel() {
       </header>
 
       <div className="ff-node-inspector__body" key={tab}>
+        {tab === 'runtime' && (
+          <>
+            <section className="ff-detail-section ff-runtime-trace">
+              <div className="ff-runtime-trace__head">
+                <h3>Execution status</h3>
+                <span className="ff-runtime-trace__badge">Runtime trace</span>
+              </div>
+              <div className="ff-runtime-metrics ff-runtime-metrics--trace">
+                <div className="ff-runtime-metric">
+                  <span className="ff-runtime-metric__label">State</span>
+                  <span className={`ff-status-pill ff-status-pill--${context.runtimeState}`}>
+                    {context.runtimeState}
+                  </span>
+                </div>
+                <div className="ff-runtime-metric">
+                  <span className="ff-runtime-metric__label">Global step</span>
+                  <span className="ff-runtime-metric__value">{context.stepLabel}</span>
+                </div>
+                <div className="ff-runtime-metric">
+                  <span className="ff-runtime-metric__label">Spine</span>
+                  <span className="ff-runtime-metric__value">
+                    {context.seqIndex >= 0
+                      ? `${context.seqIndex + 1}/${context.seqTotal}`
+                      : 'off-spine'}
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section className="ff-detail-section">
+              <h3>Timing</h3>
+              <dl className="ff-detail-dl ff-detail-dl--timing">
+                <div>
+                  <dt>Started</dt>
+                  <dd className="ff-detail-dl__mono">
+                    {context.timing?.startedAt
+                      ? new Date(context.timing.startedAt).toLocaleTimeString()
+                      : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Completed</dt>
+                  <dd className="ff-detail-dl__mono">
+                    {context.timing?.completedAt
+                      ? new Date(context.timing.completedAt).toLocaleTimeString()
+                      : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Duration</dt>
+                  <dd>{formatDuration(context.timing?.durationMs)}</dd>
+                </div>
+                <div>
+                  <dt>Attempt</dt>
+                  <dd>{context.timing?.attempt ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>Step delay</dt>
+                  <dd>{flow.simulation?.stepDelayMs ?? 1000}ms</dd>
+                </div>
+              </dl>
+            </section>
+
+            {(context.isOnDeclinePath || context.runtimeState === 'retrying') && (
+              <section className="ff-detail-section ff-runtime-alert">
+                <h3>
+                  {context.runtimeState === 'retrying' ? 'Retry policy' : 'Failure context'}
+                </h3>
+                {context.failureReason ? (
+                  <p className="ff-runtime-alert__reason">{context.failureReason}</p>
+                ) : null}
+                {context.nodeFailure ? (
+                  <p className="ff-runtime-alert__detail">{context.nodeFailure}</p>
+                ) : null}
+                {context.runtimeState === 'retrying' ? (
+                  <p className="ff-detail-hint">Exponential backoff · max 3 attempts</p>
+                ) : null}
+              </section>
+            )}
+
+            {context.activePayload ? (
+              <section className="ff-detail-section">
+                <h3>Active propagation</h3>
+                <p className="ff-detail-prose ff-detail-prose--packet">{context.activePayload}</p>
+              </section>
+            ) : null}
+
+            <section className="ff-detail-section">
+              <h3>Payload</h3>
+              <pre className="ff-detail-json">{JSON.stringify(context.payload, null, 2)}</pre>
+            </section>
+
+            <section className="ff-detail-section">
+              <h3>Propagation history</h3>
+              {context.relatedEvents.length === 0 ? (
+                <p className="ff-detail-empty">No propagation events yet</p>
+              ) : (
+                <ul className="ff-detail-events ff-detail-events--compact">
+                  {context.relatedEvents.map((ev) => (
+                    <li key={ev.id} className={`ff-detail-events__item--${ev.tone}`}>
+                      <span className="ff-detail-events__title">{ev.title}</span>
+                      {ev.detail ? (
+                        <span className="ff-detail-events__detail">{ev.detail}</span>
+                      ) : null}
+                      <time className="ff-detail-events__time">
+                        {new Date(ev.at).toLocaleTimeString()}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="ff-detail-section">
+              <h3>Operational logs</h3>
+              <RuntimeLogStream
+                logs={context.displayLogs}
+                live={isLive}
+                maxHeight={260}
+                emptyMessage="Run simulation to stream node logs"
+              />
+            </section>
+          </>
+        )}
+
         {tab === 'overview' && (
           <>
             <section className="ff-detail-section">
@@ -328,64 +488,20 @@ export function NodeInspectorPanel() {
           </>
         )}
 
-        {tab === 'runtime' && (
-          <>
-            <section className="ff-detail-section">
-              <h3>Runtime state</h3>
-              <div className="ff-runtime-metrics">
-                <div className="ff-runtime-metric">
-                  <span className="ff-runtime-metric__label">State</span>
-                  <span className={`ff-status-pill ff-status-pill--${context.runtimeState}`}>
-                    {context.runtimeState}
-                  </span>
-                </div>
-                <div className="ff-runtime-metric">
-                  <span className="ff-runtime-metric__label">Global step</span>
-                  <span className="ff-runtime-metric__value">{context.stepLabel}</span>
-                </div>
-                <div className="ff-runtime-metric">
-                  <span className="ff-runtime-metric__label">Phase</span>
-                  <span className="ff-runtime-metric__value">{phase}</span>
-                </div>
-              </div>
-            </section>
-
-            {context.activePayload ? (
-              <section className="ff-detail-section">
-                <h3>Active propagation</h3>
-                <p className="ff-detail-prose ff-detail-prose--packet">
-                  {context.activePayload}
-                </p>
-              </section>
-            ) : null}
-
-            <section className="ff-detail-section">
-              <h3>Transaction payload</h3>
-              <pre className="ff-detail-json">
-                {JSON.stringify(context.payload, null, 2)}
-              </pre>
-            </section>
-
-            <section className="ff-detail-section">
-              <h3>Simulation behavior</h3>
-              <dl className="ff-detail-dl">
-                <div>
-                  <dt>Mode</dt>
-                  <dd>Deterministic spine</dd>
-                </div>
-                <div>
-                  <dt>Delay</dt>
-                  <dd>{flow.simulation?.stepDelayMs ?? 1000}ms / step</dd>
-                </div>
-              </dl>
-            </section>
-          </>
-        )}
-
         {tab === 'logs' && (
           <>
             <section className="ff-detail-section">
-              <h3>Execution history</h3>
+              <h3>Full log stream</h3>
+              <RuntimeLogStream
+                logs={context.displayLogs}
+                live={isLive}
+                maxHeight={420}
+                emptyMessage="No operational logs — start a simulation run"
+              />
+            </section>
+
+            <section className="ff-detail-section">
+              <h3>Event timeline</h3>
               {context.relatedEvents.length === 0 ? (
                 <p className="ff-detail-empty">No events yet — run simulation to populate</p>
               ) : (
@@ -403,27 +519,6 @@ export function NodeInspectorPanel() {
                   ))}
                 </ul>
               )}
-            </section>
-
-            <section className="ff-detail-section">
-              <h3>Runtime logs</h3>
-              <ul className="ff-runtime-logs">
-                {context.runtimeLogs.length === 0 ? (
-                  <li className="ff-runtime-logs__empty">Waiting for runtime activity…</li>
-                ) : (
-                  context.runtimeLogs.map((log, i) => (
-                    <li key={`${log.at}-${i}`} className={`ff-runtime-logs__line ff-runtime-logs__line--${log.level}`}>
-                      <span className="ff-runtime-logs__time">
-                        {new Date(log.at).toLocaleTimeString()}
-                      </span>
-                      <span className="ff-runtime-logs__msg">{log.message}</span>
-                      {log.detail ? (
-                        <span className="ff-runtime-logs__detail">{log.detail}</span>
-                      ) : null}
-                    </li>
-                  ))
-                )}
-              </ul>
             </section>
           </>
         )}

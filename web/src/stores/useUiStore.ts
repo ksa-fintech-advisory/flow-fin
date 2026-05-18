@@ -24,7 +24,7 @@ export const useUiStore = create<UiStore>((set) => ({
       selectedNodeId,
       inspectorTab:
         selectedNodeId != null && selectedNodeId !== state.selectedNodeId
-          ? 'overview'
+          ? 'runtime'
           : state.inspectorTab,
     })),
   setInspectorTab: (inspectorTab) => set({ inspectorTab }),

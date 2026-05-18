@@ -1,16 +1,21 @@
 import { useEffect, useLayoutEffect, useMemo } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { playgroundMeta } from '../brand/site'
+import { DesktopRequiredGate } from '../components/DesktopRequiredGate'
 import { PageMeta } from '../components/PageMeta'
 import { SkipLink } from '../components/SkipLink'
 import { OrchestrationBar } from '../components/OrchestrationBar'
+import { PlaygroundScenarioSidebar } from '../components/PlaygroundScenarioSidebar'
 import { RuntimeSidebar } from '../components/RuntimeSidebar'
 import { DEFAULT_SCENARIO_ID, SCENARIOS } from '../fdl/scenarios'
+import { useRunningLogTicker } from '../hooks/useRunningLogTicker'
 import { FlowCanvas } from '../rendering/FlowCanvas'
 import { useGraphStore } from '../stores/useGraphStore'
 import { useUiStore } from '../stores/useUiStore'
 
-export function PlaygroundPage() {
+function PlaygroundContent() {
+  useRunningLogTicker()
+
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const setScenarioId = useGraphStore((s) => s.setScenarioId)
 
@@ -55,10 +60,30 @@ export function PlaygroundPage() {
       <PageMeta {...meta} />
       <SkipLink />
       <OrchestrationBar />
-      <main id="main-content" className="ff-main" aria-label="Runtime topology playground">
+      <main id="main-content" className="ff-main ff-playground__main" aria-label="Runtime topology playground">
+        <PlaygroundScenarioSidebar />
         <FlowCanvas key={scenarioId} flow={flow} />
         <RuntimeSidebar />
       </main>
     </div>
+  )
+}
+
+export function PlaygroundPage() {
+  const { scenarioId } = useParams<{ scenarioId: string }>()
+
+  if (!scenarioId) {
+    return <Navigate to={`/playground/${DEFAULT_SCENARIO_ID}`} replace />
+  }
+
+  const scenario = SCENARIOS.find((s) => s.id === scenarioId)
+  if (!scenario) {
+    return <Navigate to="/" replace />
+  }
+
+  return (
+    <DesktopRequiredGate>
+      <PlaygroundContent />
+    </DesktopRequiredGate>
   )
 }
