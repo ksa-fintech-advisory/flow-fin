@@ -24,6 +24,7 @@ import type { FlowDefinition } from '../fdl/types'
 import { elkBBoxForKind } from '../layout/elkNodeSizes'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
 import { useUiStore } from '../stores/useUiStore'
+import { PlaygroundCaseBar } from '../components/PlaygroundCaseBar'
 import { PlaygroundToolbar } from '../components/PlaygroundToolbar'
 import { ExecutionEdge } from './edges/ExecutionEdge'
 import { nodeTypes } from './nodeRegistry'
@@ -288,6 +289,9 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
             ) : (
               <span className="ff-canvas-overlay__hint">Click node to inspect</span>
             )}
+          </Panel>
+          <Panel position="bottom-center" className="ff-case-bar-panel">
+            <PlaygroundCaseBar />
           </Panel>
         </ReactFlow>
       )}

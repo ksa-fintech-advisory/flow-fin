@@ -66,9 +66,6 @@ export function OrchestrationBar() {
           <FlowFinLogo size={22} wordmarkClassName="ff-orchestration__logo-text" />
         </Link>
         <span className="ff-orchestration__flow-name">{flow.name}</span>
-        {activeCase?.context ? (
-          <span className="ff-orchestration__context">{activeCase.context}</span>
-        ) : null}
       </div>
 
       <div className="ff-orchestration__status">
