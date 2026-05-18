@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FlowFinLogo } from '../brand/FlowFinLogo'
+import { PlaygroundTransportButton } from './PlaygroundTransportButton'
+import { SCENARIOS } from '../fdl/scenarios'
 import { useGraphStore } from '../stores/useGraphStore'
 import {
   useRuntimeStore,
@@ -25,15 +27,14 @@ function phaseLabel(phase: SimulationPhase): string {
 
 export function OrchestrationBar() {
   const flow = useGraphStore((s) => s.flow)
+  const scenarioId = useGraphStore((s) => s.scenarioId)
+  const scenarioSubtitle = SCENARIOS.find((s) => s.id === scenarioId)?.subtitle
   const phase = useRuntimeStore((s) => s.phase)
   const cursor = useRuntimeStore((s) => s.cursor)
   const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
   const speedMultiplier = useUiStore((s) => s.speedMultiplier)
   const setSpeedMultiplier = useUiStore((s) => s.setSpeedMultiplier)
 
-  const start = useRuntimeStore((s) => s.start)
-  const pause = useRuntimeStore((s) => s.pause)
-  const resume = useRuntimeStore((s) => s.resume)
   const reset = useRuntimeStore((s) => s.reset)
   const stepForward = useRuntimeStore((s) => s.stepForward)
   const advanceStep = useRuntimeStore((s) => s.advanceStep)
@@ -66,6 +67,12 @@ export function OrchestrationBar() {
           <FlowFinLogo size={22} wordmarkClassName="ff-orchestration__logo-text" />
         </Link>
         <span className="ff-orchestration__flow-name">{flow.name}</span>
+        {scenarioSubtitle ? (
+          <span className="ff-orchestration__subtitle">{scenarioSubtitle}</span>
+        ) : null}
+        {activeCase?.context ? (
+          <span className="ff-orchestration__context">{activeCase.context}</span>
+        ) : null}
       </div>
 
       <div className="ff-orchestration__status">
@@ -80,49 +87,27 @@ export function OrchestrationBar() {
       </div>
 
       <div className="ff-orchestration__controls">
-        <label className="ff-speed">
-          <span>Speed</span>
-          <select
-            value={String(speedMultiplier)}
-            onChange={(e) => setSpeedMultiplier(Number(e.target.value))}
-          >
-            <option value="0.5">0.5×</option>
-            <option value="1">1×</option>
-            <option value="1.5">1.5×</option>
-            <option value="2">2×</option>
-          </select>
-        </label>
-
-        <button type="button" className="ff-btn" onClick={() => reset()}>
-          Reset
-        </button>
-        <button
-          type="button"
-          className="ff-btn ff-btn--primary"
-          onClick={() => start()}
-          disabled={phase === 'running'}
-        >
-          Play
-        </button>
-        <button
-          type="button"
-          className="ff-btn"
-          onClick={() => pause()}
-          disabled={phase !== 'running'}
-        >
-          Pause
-        </button>
-        <button
-          type="button"
-          className="ff-btn"
-          onClick={() => resume()}
-          disabled={phase !== 'paused'}
-        >
-          Resume
-        </button>
-        <button type="button" className="ff-btn ff-btn--ghost" onClick={() => stepForward()}>
-          Step
-        </button>
+        <PlaygroundTransportButton variant="hero" />
+        <div className="ff-orchestration__controls-secondary">
+          <label className="ff-speed">
+            <span>Speed</span>
+            <select
+              value={String(speedMultiplier)}
+              onChange={(e) => setSpeedMultiplier(Number(e.target.value))}
+            >
+              <option value="0.5">0.5×</option>
+              <option value="1">1×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2×</option>
+            </select>
+          </label>
+          <button type="button" className="ff-btn ff-btn--ghost" onClick={() => reset()}>
+            Reset
+          </button>
+          <button type="button" className="ff-btn ff-btn--ghost" onClick={() => stepForward()}>
+            Step
+          </button>
+        </div>
       </div>
     </header>
   )

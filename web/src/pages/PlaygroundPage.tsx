@@ -5,7 +5,7 @@ import { DesktopRequiredGate } from '../components/DesktopRequiredGate'
 import { PageMeta } from '../components/PageMeta'
 import { SkipLink } from '../components/SkipLink'
 import { OrchestrationBar } from '../components/OrchestrationBar'
-import { PlaygroundScenarioSidebar } from '../components/PlaygroundScenarioSidebar'
+import { PlaygroundScenarioStrip } from '../components/PlaygroundScenarioStrip'
 import { RuntimeSidebar } from '../components/RuntimeSidebar'
 import { DEFAULT_SCENARIO_ID, SCENARIOS } from '../fdl/scenarios'
 import { useRunningLogTicker } from '../hooks/useRunningLogTicker'
@@ -54,14 +54,19 @@ function PlaygroundContent() {
   }
 
   const meta = playgroundMeta(scenario.id, scenario.title, scenario.subtitle)
+  const inspectorCollapsed = useUiStore((s) => s.inspectorCollapsed)
 
   return (
     <div className="ff-shell ff-playground">
       <PageMeta {...meta} />
       <SkipLink />
       <OrchestrationBar />
-      <main id="main-content" className="ff-main ff-playground__main" aria-label="Runtime topology playground">
-        <PlaygroundScenarioSidebar />
+      <PlaygroundScenarioStrip />
+      <main
+        id="main-content"
+        className={`ff-main ff-playground__main${inspectorCollapsed ? ' ff-playground__main--inspector-collapsed' : ''}`}
+        aria-label="Runtime topology playground"
+      >
         <FlowCanvas key={scenarioId} flow={flow} />
         <RuntimeSidebar />
       </main>
