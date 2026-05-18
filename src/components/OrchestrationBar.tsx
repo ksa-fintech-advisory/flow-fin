@@ -1,9 +1,7 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FlowFinLogo } from '../brand/FlowFinLogo'
 import { PlaygroundTransportButton } from './PlaygroundTransportButton'
 import { RuntimeTimelineControls } from './RuntimeTimelineControls'
-import { jitterStepDelay, queueDelayBonus } from '../runtime/variability'
 import { SCENARIOS } from '../fdl/scenarios'
 import { useGraphStore } from '../stores/useGraphStore'
 import {
@@ -39,37 +37,10 @@ export function OrchestrationBar() {
 
   const reset = useRuntimeStore((s) => s.reset)
   const stepForward = useRuntimeStore((s) => s.stepForward)
-  const advanceStep = useRuntimeStore((s) => s.advanceStep)
 
   const cases = flow.simulation?.cases
   const activeCase = cases?.find((c) => c.id === activeCaseId) ?? cases?.[0]
   const seqLen = activeCase?.sequence.length ?? flow.simulation?.sequence.length ?? 0
-
-  useEffect(() => {
-    if (phase !== 'running') return
-    const base = flow.simulation?.stepDelayMs ?? 1000
-    const seq =
-      cases?.find((c) => c.id === activeCaseId)?.sequence ??
-      flow.simulation?.sequence ??
-      []
-    const nodeId = cursor >= 0 && cursor < seq.length ? seq[cursor]! : 'start'
-    const jittered = jitterStepDelay(base, Math.max(0, cursor), nodeId)
-    const ms = Math.max(
-      120,
-      (jittered + queueDelayBonus(base, cursor)) / speedMultiplier,
-    )
-    const id = window.setInterval(() => advanceStep(), ms)
-    return () => window.clearInterval(id)
-  }, [
-    phase,
-    flow.simulation?.stepDelayMs,
-    speedMultiplier,
-    advanceStep,
-    cursor,
-    activeCaseId,
-    cases,
-    flow.simulation?.sequence,
-  ])
 
   const progress =
     phase === 'completed'

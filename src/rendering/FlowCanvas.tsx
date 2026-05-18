@@ -23,9 +23,11 @@ import { FlowFinLogoMark } from '../brand/FlowFinLogo'
 import type { FlowDefinition } from '../fdl/types'
 import { elkBBoxForKind } from '../layout/elkNodeSizes'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
+import { MobileCanvasHud } from '../components/mobile/MobileCanvasHud'
 import { PlaygroundCaseBar } from '../components/PlaygroundCaseBar'
 import { PlaygroundToolbar } from '../components/PlaygroundToolbar'
 import { TopologyThemePicker } from '../components/TopologyThemePicker'
+import { MobileNodeFocus } from './MobileNodeFocus'
 import { useUiStore } from '../stores/useUiStore'
 import { ExecutionEdge } from './edges/ExecutionEdge'
 import { buildClusterNodes } from './buildClusterNodes'
@@ -36,22 +38,39 @@ import { nodeTypes } from './nodeRegistry'
 const edgeTypes = { execution: ExecutionEdge } satisfies EdgeTypes
 const flowNodeTypes = { ...nodeTypes, cluster: ClusterNode } satisfies NodeTypes
 
-function ElkFitView({ layoutVersion }: { layoutVersion: number }) {
+export type CanvasMode = 'desktop' | 'tablet' | 'mobile'
+
+function ElkFitView({
+  layoutVersion,
+  canvasMode,
+}: {
+  layoutVersion: number
+  canvasMode: CanvasMode
+}) {
   const { fitView } = useReactFlow()
 
   useEffect(() => {
     if (!layoutVersion) return
-    // Delay slightly so nodes settle before fitting
+    const padding = canvasMode === 'mobile' ? 0.38 : canvasMode === 'tablet' ? 0.28 : 0.18
+    const minZoom = canvasMode === 'mobile' ? 0.28 : 0.15
     const timer = setTimeout(() => {
-      fitView({ padding: 0.18, duration: 420, minZoom: 0.15 })
+      fitView({ padding, duration: 420, minZoom })
     }, 60)
     return () => clearTimeout(timer)
-  }, [layoutVersion, fitView])
+  }, [layoutVersion, fitView, canvasMode])
 
   return null
 }
 
-function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
+function FlowCanvasInner({
+  flow,
+  canvasMode = 'desktop',
+}: {
+  flow: FlowDefinition
+  canvasMode?: CanvasMode
+}) {
+  const isMobileCanvas = canvasMode === 'mobile'
+  const isCompanionCanvas = canvasMode !== 'desktop'
   const selectedNodeId = useUiStore((s) => s.selectedNodeId)
   const nodeStates = useRuntimeStore((s) => s.nodeStates)
   const activeEdgeIds = useRuntimeStore((s) => s.activeEdgeIds)
@@ -186,9 +205,19 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
         },
       }
     })
-    const clusters = buildClusterNodes(flow, financial)
+    const clusters = isMobileCanvas ? [] : buildClusterNodes(flow, financial)
     return [...clusters, ...financial]
-  }, [elkNodes, flow, nodeStates, selectedNodeId, failureReason, nodeFailureMessages, nodeMetrics, visitedNodeIds])
+  }, [
+    elkNodes,
+    flow,
+    nodeStates,
+    selectedNodeId,
+    failureReason,
+    nodeFailureMessages,
+    nodeMetrics,
+    visitedNodeIds,
+    isMobileCanvas,
+  ])
 
   const edges: Edge[] = useMemo(
     () =>
@@ -267,7 +296,9 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
   }, [])
 
   return (
-    <div className="ff-canvas-wrap">
+    <div
+      className={`ff-canvas-wrap${isCompanionCanvas ? ' ff-canvas-wrap--companion' : ''}${isMobileCanvas ? ' ff-canvas-wrap--mobile' : ''}`}
+    >
       {!elkNodes ? (
         <div className="ff-canvas-loading" role="status" aria-live="polite">
           <FlowFinLogoMark size={36} title="FlowFin" />
@@ -277,41 +308,43 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
       ) : (
         <ReactFlow
           key={flow.id}
-          className={`ff-flow-editor ff-flow-editor--${topologyTheme} ${phase === 'running' ? 'ff-flow-editor--live' : ''} ${phase === 'idle' ? 'ff-flow-editor--ambient' : ''}`}
+          className={`ff-flow-editor ff-flow-editor--${topologyTheme}${isCompanionCanvas ? ' ff-flow-editor--companion' : ''}${isMobileCanvas ? ' ff-flow-editor--mobile' : ''} ${phase === 'running' ? 'ff-flow-editor--live' : ''} ${phase === 'idle' ? 'ff-flow-editor--ambient' : ''}`}
           nodes={nodes}
           edges={edges}
           nodeTypes={flowNodeTypes}
           edgeTypes={edgeTypes}
-          fitViewOptions={{ padding: 0.28 }}
-          minZoom={0.2}
-          maxZoom={2}
+          fitViewOptions={{ padding: isMobileCanvas ? 0.38 : 0.28 }}
+          minZoom={isMobileCanvas ? 0.28 : 0.2}
+          maxZoom={isMobileCanvas ? 1.65 : 2}
           proOptions={{ hideAttribution: true }}
           onPaneClick={onPaneClick}
           onNodeClick={onNodeClick}
           nodesConnectable={false}
-          nodesDraggable
+          nodesDraggable={!isCompanionCanvas}
           elementsSelectable
-          panOnScroll
-          zoomOnScroll
+          panOnScroll={!isCompanionCanvas}
+          zoomOnScroll={!isCompanionCanvas}
           zoomOnPinch
           panOnDrag
           selectionOnDrag={false}
-          elevateEdgesOnSelect
-          elevateNodesOnSelect
+          elevateEdgesOnSelect={!isMobileCanvas}
+          elevateNodesOnSelect={!isMobileCanvas}
         >
-          <ElkFitView layoutVersion={layoutVersion} />
+          <ElkFitView layoutVersion={layoutVersion} canvasMode={canvasMode} />
+          <MobileNodeFocus enabled={isCompanionCanvas} />
           <Background
             variant={BackgroundVariant.Dots}
-            gap={28}
-            size={1.2}
+            gap={isMobileCanvas ? 36 : 28}
+            size={isMobileCanvas ? 1 : 1.2}
             color="rgba(51, 65, 85, 0.38)"
           />
           <PayloadPacketLayer edgeGeometry={edgeGeometry} />
           <Controls
             showInteractive={false}
-            className="ff-flow-controls"
-            position="bottom-left"
+            className={`ff-flow-controls${isCompanionCanvas ? ' ff-flow-controls--touch' : ''}`}
+            position={isMobileCanvas ? 'top-right' : 'bottom-left'}
           />
+          {!isCompanionCanvas ? (
           <MiniMap
             className="ff-minimap ff-topology-radar"
             pannable
@@ -326,6 +359,8 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
               return '#475569'
             }}
           />
+          ) : null}
+          {!isCompanionCanvas ? (
           <Panel position="top-left" className="ff-canvas-panel">
             <PlaygroundToolbar
               nodeCount={flow.nodes.length}
@@ -333,6 +368,12 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
               layoutReady={Boolean(elkNodes)}
             />
           </Panel>
+          ) : null}
+          {isCompanionCanvas ? (
+            <Panel position="top-right" className="ff-canvas-overlay ff-canvas-overlay--companion">
+              <MobileCanvasHud />
+            </Panel>
+          ) : (
           <Panel position="top-right" className="ff-canvas-overlay">
             <TopologyThemePicker />
             <div className="ff-runtime-chip">
@@ -350,9 +391,12 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
               <span className="ff-canvas-overlay__hint">Click node to inspect</span>
             )}
           </Panel>
+          )}
+          {!isCompanionCanvas ? (
           <Panel position="bottom-center" className="ff-case-bar-panel">
             <PlaygroundCaseBar />
           </Panel>
+          ) : null}
         </ReactFlow>
       )}
     </div>
@@ -361,12 +405,13 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
 
 type FlowCanvasProps = {
   flow: FlowDefinition
+  canvasMode?: CanvasMode
 }
 
-export function FlowCanvas({ flow }: FlowCanvasProps) {
+export function FlowCanvas({ flow, canvasMode = 'desktop' }: FlowCanvasProps) {
   return (
     <ReactFlowProvider>
-      <FlowCanvasInner flow={flow} />
+      <FlowCanvasInner flow={flow} canvasMode={canvasMode} />
     </ReactFlowProvider>
   )
 }

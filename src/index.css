@@ -3671,3 +3671,629 @@ body {
   flex-wrap: wrap;
   gap: 10px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Adaptive companion — mobile & tablet (NOT shrunk desktop)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ff-playground--adaptive {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.ff-playground--adaptive .ff-scenario-strip {
+  flex-shrink: 0;
+}
+
+.ff-mobile-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ff-mobile-panel {
+  flex: 1;
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ff-mobile-panel--active {
+  display: flex;
+}
+
+.ff-mobile-panel--topology {
+  position: relative;
+}
+
+.ff-mobile-panel--topology .ff-canvas-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+.ff-mobile-panel--events,
+.ff-mobile-panel--runtime {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* —— Mobile orchestration header —— */
+.ff-mobile-orchestration {
+  flex-shrink: 0;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.14);
+  background: rgba(8, 12, 22, 0.94);
+  backdrop-filter: blur(16px);
+}
+
+.ff-mobile-orchestration__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ff-mobile-orchestration__logo {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.ff-mobile-orchestration__wordmark {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ff-mobile-orchestration__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ff-mobile-orchestration__inflight {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7dd3fc;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.ff-mobile-orchestration__flow {
+  margin-top: 10px;
+}
+
+.ff-mobile-orchestration__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #f8fafc;
+  line-height: 1.25;
+}
+
+.ff-mobile-orchestration__meta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.ff-mobile-orchestration__context {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #a7f3d0;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.28);
+}
+
+.ff-mobile-orchestration__transport {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* —— Topology node rail —— */
+.ff-mobile-topology-rail {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(10, 14, 26, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.ff-mobile-topology-rail__label {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.ff-mobile-topology-rail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.ff-mobile-topology-rail__list::-webkit-scrollbar {
+  display: none;
+}
+
+.ff-mobile-node-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e2e8f0;
+  font: inherit;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.ff-mobile-node-chip--active {
+  border-color: var(--accent, #38bdf8);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #38bdf8) 35%, transparent);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+.ff-mobile-node-chip__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.ff-mobile-node-chip__icon .ff-node__icon-svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ff-mobile-node-chip__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ff-mobile-node-chip__label {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ff-mobile-node-chip__state {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.ff-mobile-node-chip__state--running {
+  color: #38bdf8;
+}
+
+.ff-mobile-node-chip__state--success {
+  color: #34d399;
+}
+
+.ff-mobile-node-chip__state--failed {
+  color: #f87171;
+}
+
+/* —— Companion canvas —— */
+.ff-canvas-wrap--companion {
+  min-height: 0;
+}
+
+.ff-canvas-wrap--mobile::after {
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(7, 11, 20, 0.45) 100%);
+}
+
+.ff-flow-editor--companion .react-flow__node {
+  touch-action: none;
+}
+
+/* Companion canvas keeps full runtime motion (edges, nodes, packets) */
+.ff-flow-editor--companion.ff-flow-editor--live .react-flow__edge-path {
+  animation: ff-edge-flow 0.85s linear infinite;
+}
+
+.ff-flow-editor--companion.ff-flow-editor--live .ff-node--running .ff-node__card {
+  animation: ff-node-pulse 1.4s ease-in-out infinite;
+}
+
+.ff-flow-editor--companion .ff-packet {
+  z-index: 12;
+}
+
+.ff-flow-controls--touch button {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.ff-canvas-overlay--companion {
+  margin: 10px !important;
+}
+
+.ff-mobile-canvas-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.ff-runtime-chip--compact {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.ff-mobile-canvas-hud__hint {
+  font-size: 10px;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+/* —— Runtime dock & bottom nav —— */
+.ff-mobile-dock {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(10, 14, 26, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.ff-mobile-dock .ff-timeline-controls {
+  width: 100%;
+}
+
+.ff-mobile-dock__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ff-speed--compact {
+  font-size: 11px;
+}
+
+.ff-btn--touch {
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
+.ff-mobile-nav {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 6px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(56, 189, 248, 0.12);
+  background: rgba(6, 10, 20, 0.98);
+  backdrop-filter: blur(16px);
+}
+
+.ff-mobile-nav__btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 52px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #94a3b8;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.ff-mobile-nav__btn--active {
+  color: #f8fafc;
+  background: rgba(56, 189, 248, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.25);
+}
+
+.ff-mobile-nav__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(51, 65, 85, 0.65);
+  position: relative;
+}
+
+.ff-mobile-nav__btn--active .ff-mobile-nav__icon {
+  background: rgba(56, 189, 248, 0.35);
+}
+
+.ff-mobile-nav__icon--topology::before,
+.ff-mobile-nav__icon--events::before,
+.ff-mobile-nav__icon--runtime::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 3px;
+  border: 2px solid currentColor;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.ff-mobile-nav__icon--topology {
+  color: #38bdf8;
+}
+
+.ff-mobile-nav__icon--events {
+  color: #a78bfa;
+}
+
+.ff-mobile-nav__icon--events::before {
+  border-radius: 2px;
+  box-shadow: 0 -5px 0 -1px currentColor;
+}
+
+.ff-mobile-nav__icon--runtime {
+  color: #34d399;
+}
+
+.ff-mobile-nav__icon--runtime::before {
+  border-radius: 50%;
+}
+
+/* —— Events & runtime panels —— */
+.ff-mobile-events {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 0 16px;
+}
+
+.ff-mobile-events__head {
+  flex-shrink: 0;
+  padding: 16px 16px 8px;
+}
+
+.ff-mobile-events__head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.ff-mobile-events__head p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.ff-mobile-events .ff-copilot {
+  flex-shrink: 0;
+  margin: 0 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.ff-mobile-events .ff-timeline {
+  flex: 1;
+  min-height: 240px;
+  max-height: none;
+  border-left: none;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.ff-mobile-runtime {
+  padding: 16px 16px 24px;
+}
+
+.ff-mobile-runtime__head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.ff-mobile-runtime__head p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.ff-mobile-runtime__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.ff-playground--tablet .ff-mobile-runtime__metrics {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.ff-mobile-metric {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(51, 65, 85, 0.65);
+  background: rgba(15, 23, 42, 0.65);
+}
+
+.ff-mobile-metric__label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.ff-mobile-metric__value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f1f5f9;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.ff-mobile-metric__value--alert {
+  color: #f87171;
+}
+
+.ff-mobile-runtime__alert {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.18);
+}
+
+.ff-mobile-runtime__alert strong {
+  display: block;
+  font-size: 12px;
+  color: #fecaca;
+  margin-bottom: 4px;
+}
+
+.ff-mobile-runtime__alert p {
+  margin: 0;
+  font-size: 13px;
+  color: #fda4af;
+}
+
+.ff-mobile-runtime__theme,
+.ff-mobile-runtime__cases {
+  margin-top: 20px;
+}
+
+.ff-mobile-runtime__theme h3,
+.ff-mobile-runtime__cases h3 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.ff-mobile-runtime__cases .ff-case-dock {
+  position: static;
+  transform: none;
+  max-width: 100%;
+}
+
+/* —— Inspector bottom sheet —— */
+.ff-mobile-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.ff-mobile-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.ff-mobile-sheet__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: min(88dvh, 720px);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-bottom: none;
+  background: rgba(8, 12, 22, 0.98);
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.ff-mobile-sheet__handle {
+  flex-shrink: 0;
+  width: 40px;
+  height: 4px;
+  margin: 10px auto 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.45);
+}
+
+.ff-mobile-sheet .ff-node-inspector {
+  flex: 1;
+  min-height: 0;
+  border-bottom: none;
+}
+
+.ff-mobile-sheet .ff-node-inspector--empty {
+  display: none;
+}
+
+.ff-mobile-sheet .ff-node-inspector__close {
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+}
+
+.ff-mobile-sheet .ff-inspector-tabs__btn {
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+/* Tablet: slightly more canvas, same companion shell */
+.ff-playground--tablet .ff-mobile-panel--topology .ff-canvas-wrap {
+  min-height: 50vh;
+}
+
+.ff-playground--tablet .ff-mobile-topology-rail__list {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}

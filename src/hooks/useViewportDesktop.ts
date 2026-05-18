@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { DESKTOP_MIN_PX } from './useDeviceClass'
 
 /** Minimum viewport width for the orchestration playground. */
-export const PLAYGROUND_DESKTOP_MIN_PX = 1024
+export const PLAYGROUND_DESKTOP_MIN_PX = DESKTOP_MIN_PX
 
 export function useViewportDesktop(minWidth = PLAYGROUND_DESKTOP_MIN_PX): boolean {
   const query = `(min-width: ${minWidth}px)`
