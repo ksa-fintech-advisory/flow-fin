@@ -25,6 +25,8 @@ export type ExecutionEdgeData = {
   elkPoints?: { x: number; y: number }[]
   /** Flow direction: 'forward' (request path) or 'response' (backward/return path) */
   direction?: EdgeDirection
+  /** Edge already traveled in this simulation — persistent light path */
+  visited?: boolean
   /** Fading propagation trail opacity (0–1) */
   trailOpacity?: number
   trailTone?: 'active' | 'failed' | 'success'
@@ -79,6 +81,7 @@ export function ExecutionEdge({
   }
 
   const active = Boolean(edgeData?.active)
+  const visited = Boolean(edgeData?.visited) && !active
   const failed = Boolean(edgeData?.failed)
   const succeeded = Boolean(edgeData?.succeeded)
   const highlighted = Boolean(edgeData?.highlighted) || Boolean(selected)
@@ -96,6 +99,7 @@ export function ExecutionEdge({
     active ? 'ff-edge-wire--active' : '',
     failed ? 'ff-edge-wire--failed' : '',
     succeeded ? 'ff-edge-wire--succeeded' : '',
+    visited ? 'ff-edge-wire--visited' : '',
     highlighted ? 'ff-edge-wire--highlight' : '',
     isResponse ? 'ff-edge-wire--response' : '',
   ]
@@ -133,14 +137,33 @@ export function ExecutionEdge({
     : succeeded
       ? succeededColor
       : activeColor
+  const visitedForwardColor = 'rgba(186, 230, 253, 0.72)'
+  const visitedResponseColor = 'rgba(226, 211, 181, 0.65)'
+
   const strokeColor = active
     ? resolvedActiveColor
     : failed
       ? failedMuted
-      : highlighted
-        ? highlightColor
-        : baseColor
-  const strokeWidth = active ? 2.5 : failed ? 2 : highlighted ? 1.8 : succeeded ? 1.6 : 1.4
+      : succeeded
+        ? succeededMuted
+        : visited
+          ? isResponse
+            ? visitedResponseColor
+            : visitedForwardColor
+          : highlighted
+            ? highlightColor
+            : baseColor
+  const strokeWidth = active
+    ? 2.5
+    : failed
+      ? 2
+      : visited
+        ? 2.35
+        : highlighted
+          ? 1.8
+          : succeeded
+            ? 1.6
+            : 1.4
 
   const markerColor = active
     ? resolvedActiveColor
@@ -219,6 +242,19 @@ export function ExecutionEdge({
         strokeWidth={22}
         className="ff-edge-hit"
       />
+
+      {/* Persistent visited path — light bold memory of traversed route */}
+      {visited ? (
+        <path
+          d={path}
+          fill="none"
+          stroke={isResponse ? 'rgba(226, 211, 181, 0.35)' : 'rgba(186, 230, 253, 0.38)'}
+          strokeWidth={4.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="ff-edge-wire--visited-glow"
+        />
+      ) : null}
 
       {/* Propagation trail — fading execution history */}
       {showTrail ? (

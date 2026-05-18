@@ -13,6 +13,8 @@ export type FinancialNodeData = {
   runtimeState: RuntimeNodeState
   /** Contextual failure/decline message for this node */
   failureMessage?: string | null
+  /** Node is on the path already traveled in this simulation */
+  visited?: boolean
 }
 
 function statusLabel(state: RuntimeNodeState): string {
@@ -20,7 +22,7 @@ function statusLabel(state: RuntimeNodeState): string {
 }
 
 export function FinancialNode({ id, data, selected }: NodeProps) {
-  const { kind, label, runtimeState, failureMessage } = data as FinancialNodeData
+  const { kind, label, runtimeState, failureMessage, visited } = data as FinancialNodeData
   const visual = NODE_VISUALS[kind]
   const storeSelected = useUiStore((s) => s.selectedNodeId === id)
   const phase = useRuntimeStore((s) => s.phase)
@@ -47,6 +49,7 @@ export function FinancialNode({ id, data, selected }: NodeProps) {
     shapeClass,
     isEnd ? 'ff-node--terminal-exit' : '',
     `ff-node--${runtimeState}`,
+    visited && runtimeState !== 'running' ? 'ff-node--visited' : '',
     isSelected ? 'ff-node--selected' : '',
   ]
     .filter(Boolean)

@@ -48,6 +48,8 @@ interface RuntimeStore {
   activeEdgeIds: string[]
   failedEdgeIds: string[]
   succeededEdgeIds: string[]
+  /** Cumulative path: edges the simulation has already traveled */
+  visitedEdgeIds: string[]
   failureReason: string | null
   nodeFailureMessages: Record<string, string>
   activeEdgePayloads: Record<string, string>
@@ -158,6 +160,7 @@ const INITIAL_RUNTIME = {
   activeEdgeIds: [] as string[],
   failedEdgeIds: [] as string[],
   succeededEdgeIds: [] as string[],
+  visitedEdgeIds: [] as string[],
   failureReason: null as string | null,
   nodeFailureMessages: {} as Record<string, string>,
   activeEdgePayloads: {} as Record<string, string>,
@@ -189,12 +192,18 @@ function snapshotFromState(state: RuntimeStore): RuntimeSnapshot {
     activeEdgeIds: [...state.activeEdgeIds],
     failedEdgeIds: [...state.failedEdgeIds],
     succeededEdgeIds: [...state.succeededEdgeIds],
+    visitedEdgeIds: [...state.visitedEdgeIds],
     failureReason: state.failureReason,
     nodeFailureMessages: { ...state.nodeFailureMessages },
     activeEdgePayloads: { ...state.activeEdgePayloads },
     propagationTrails: state.propagationTrails.map((t) => ({ ...t })),
     nodeMetrics: { ...state.nodeMetrics },
   }
+}
+
+function markEdgeVisited(edges: string[], edgeId: string | undefined): string[] {
+  if (!edgeId || edges.includes(edgeId)) return edges
+  return [...edges, edgeId]
 }
 
 function pushTrail(
@@ -440,6 +449,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       timeline,
       failedEdgeIds,
       succeededEdgeIds,
+      visitedEdgeIds,
       failureReason,
       nodeFailureMessages,
       nodeLogs,
@@ -449,6 +459,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       nodeMetrics,
       transitPackets,
     } = state
+    let nextVisitedEdgeIds = [...visitedEdgeIds]
     const now = Date.now()
     let nextTransitPackets = transitPackets
 
@@ -545,6 +556,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         const inboundId = edgeBetween(flow, seq[cursor - 1]!, completedId)
         if (inboundId) {
           propagationTrails = pushTrail(propagationTrails, inboundId, 'failed')
+          nextVisitedEdgeIds = markEdgeVisited(nextVisitedEdgeIds, inboundId)
           if (!failedEdgeIds.includes(inboundId)) {
             failedEdgeIds = [...failedEdgeIds, inboundId]
           }
@@ -563,6 +575,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         activeEdgePayloads: {},
         failedEdgeIds,
         succeededEdgeIds,
+        visitedEdgeIds: nextVisitedEdgeIds,
         failureReason,
         nodeFailureMessages,
         nodeLogs,
@@ -607,6 +620,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       const eid = edgeBetween(flow, prevId, nextId)
       if (eid) {
         activeEdgeIds = [eid]
+        nextVisitedEdgeIds = markEdgeVisited(nextVisitedEdgeIds, eid)
         if (caseEdgePayloads[eid]) {
           newActivePayloads[eid] = caseEdgePayloads[eid]
         }
@@ -722,6 +736,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       activeEdgePayloads: newActivePayloads,
       failedEdgeIds: newFailedEdgeIds,
       succeededEdgeIds: newSucceededEdgeIds,
+      visitedEdgeIds: nextVisitedEdgeIds,
       failureReason,
       nodeFailureMessages,
       nodeLogs,

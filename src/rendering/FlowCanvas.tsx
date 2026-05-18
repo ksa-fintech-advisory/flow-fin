@@ -63,10 +63,22 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
   const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
   const phase = useRuntimeStore((s) => s.phase)
   const propagationTrails = useRuntimeStore((s) => s.propagationTrails)
+  const visitedEdgeIds = useRuntimeStore((s) => s.visitedEdgeIds)
+  const cursor = useRuntimeStore((s) => s.cursor)
   const nodeMetrics = useRuntimeStore((s) => s.nodeMetrics)
   const transitPackets = useRuntimeStore((s) => s.transitPackets)
   const bindFlow = useRuntimeStore((s) => s.bindFlow)
   const topologyTheme = useUiStore((s) => s.topologyTheme)
+
+  const visitedNodeIds = useMemo(() => {
+    const cases = flow.simulation?.cases
+    const simCase =
+      (activeCaseId ? cases?.find((c) => c.id === activeCaseId) : null) ??
+      cases?.[0]
+    const seq = simCase?.sequence ?? flow.simulation?.sequence ?? []
+    if (cursor < 0 || !seq.length) return new Set<string>()
+    return new Set(seq.slice(0, Math.min(cursor + 1, seq.length)))
+  }, [flow, activeCaseId, cursor])
 
   const caseEdgePayloads = useMemo(() => {
     const cases = flow.simulation?.cases
@@ -170,12 +182,13 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
             ? failureMessage
             : null,
           metrics: nodeMetrics[node.id],
+          visited: visitedNodeIds.has(node.id),
         },
       }
     })
     const clusters = buildClusterNodes(flow, financial)
     return [...clusters, ...financial]
-  }, [elkNodes, flow, nodeStates, selectedNodeId, failureReason, nodeFailureMessages, nodeMetrics])
+  }, [elkNodes, flow, nodeStates, selectedNodeId, failureReason, nodeFailureMessages, nodeMetrics, visitedNodeIds])
 
   const edges: Edge[] = useMemo(
     () =>
@@ -186,6 +199,7 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
         const isFailed = failedEdgeIds.includes(e.id)
         const isSucceeded = succeededEdgeIds.includes(e.id)
         const isActive = activeEdgeIds.includes(e.id)
+        const isVisited = visitedEdgeIds.includes(e.id)
         const edgeTrails = propagationTrails.filter((t) => t.edgeId === e.id)
         const trailOpacity = edgeTrails.reduce((max, t) => Math.max(max, t.opacity), 0)
         const trailTone = edgeTrails[edgeTrails.length - 1]?.tone ?? 'active'
@@ -210,6 +224,7 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
           data: {
             label: edgeLabel,
             active: isActive,
+            visited: isVisited && !isActive,
             failed: isFailed,
             succeeded: isSucceeded,
             highlighted: touchesSelection,
@@ -239,6 +254,7 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
       backwardIds,
       propagationTrails,
       nodeMetrics,
+      visitedEdgeIds,
     ],
   )
 

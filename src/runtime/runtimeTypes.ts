@@ -40,6 +40,8 @@ export interface RuntimeSnapshot {
   activeEdgeIds: string[]
   failedEdgeIds: string[]
   succeededEdgeIds: string[]
+  /** Edges already traversed in this simulation run — persistent path memory */
+  visitedEdgeIds: string[]
   failureReason: string | null
   nodeFailureMessages: Record<string, string>
   activeEdgePayloads: Record<string, string>
