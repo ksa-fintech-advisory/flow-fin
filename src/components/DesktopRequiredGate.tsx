@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FlowFinLogo } from '../brand/FlowFinLogo'
 import { SITE_NAME } from '../brand/site'
 import { useViewportDesktop } from '../hooks/useViewportDesktop'
@@ -13,6 +14,7 @@ type DesktopRequiredGateProps = {
  * Shows an intentional fullscreen message instead of a broken graph layout.
  */
 export function DesktopRequiredGate({ children, minWidth }: DesktopRequiredGateProps) {
+  const { t } = useTranslation()
   const isDesktop = useViewportDesktop(minWidth)
 
   if (!isDesktop) {
@@ -21,21 +23,16 @@ export function DesktopRequiredGate({ children, minWidth }: DesktopRequiredGateP
         <div className="ff-desktop-gate__backdrop" aria-hidden />
         <div className="ff-desktop-gate__panel" role="alert">
           <FlowFinLogo size={36} title={SITE_NAME} />
-          <h1>Desktop environment required</h1>
-          <p>
-            {SITE_NAME} currently requires a desktop environment for the best orchestration and
-            topology experience.
-          </p>
+          <h1>{t('desktopGate.title')}</h1>
+          <p>{t('desktopGate.body', { brand: SITE_NAME })}</p>
           <ul className="ff-desktop-gate__reasons">
-            <li>Graph readability and ELK layout</li>
-            <li>Runtime propagation visualization</li>
-            <li>Node inspector and operational tracing</li>
+            <li>{t('desktopGate.reasonLayout')}</li>
+            <li>{t('desktopGate.reasonPropagation')}</li>
+            <li>{t('desktopGate.reasonInspector')}</li>
           </ul>
-          <p className="ff-desktop-gate__hint">
-            Widen your browser window or open this scenario on a laptop or desktop display.
-          </p>
+          <p className="ff-desktop-gate__hint">{t('desktopGate.hint')}</p>
         </div>
-      </div>
+        </div>
     )
   }
 

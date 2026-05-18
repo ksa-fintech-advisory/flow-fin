@@ -1,11 +1,14 @@
+import { useTranslation } from 'react-i18next'
 import { PlaygroundCaseBar } from '../PlaygroundCaseBar'
 import { TopologyThemePicker } from '../TopologyThemePicker'
+import { phaseLabel } from '../../i18n/helpers'
 import { formatMetricPercent } from '../../runtime/metrics'
 import { useGraphStore } from '../../stores/useGraphStore'
 import { useRuntimeStore } from '../../stores/useRuntimeStore'
 
 /** Runtime metrics, case selection, and playback context for companion mode. */
 export function MobileRuntimeView() {
+  const { t } = useTranslation()
   const flow = useGraphStore((s) => s.flow)
   const phase = useRuntimeStore((s) => s.phase)
   const failureReason = useRuntimeStore((s) => s.failureReason)
@@ -30,33 +33,33 @@ export function MobileRuntimeView() {
   return (
     <div className="ff-mobile-runtime">
       <header className="ff-mobile-runtime__head">
-        <h2>Runtime observability</h2>
-        <p>Metrics · playback · scenario outcomes</p>
+        <h2>{t('mobile.runtimeTitle')}</h2>
+        <p>{t('mobile.runtimeSubtitle')}</p>
       </header>
 
-      <section className="ff-mobile-runtime__metrics" aria-label="Runtime metrics">
+      <section className="ff-mobile-runtime__metrics" aria-label={t('aria.runtimeMetrics')}>
         <div className="ff-mobile-metric">
-          <span className="ff-mobile-metric__label">Phase</span>
-          <span className={`ff-pill ff-pill--${phase}`}>{phase}</span>
+          <span className="ff-mobile-metric__label">{t('mobile.phase')}</span>
+          <span className={`ff-pill ff-pill--${phase}`}>{phaseLabel(t, phase)}</span>
         </div>
         <div className="ff-mobile-metric">
-          <span className="ff-mobile-metric__label">Nodes</span>
+          <span className="ff-mobile-metric__label">{t('common.nodes')}</span>
           <span className="ff-mobile-metric__value">{nodes.length}</span>
         </div>
         <div className="ff-mobile-metric">
-          <span className="ff-mobile-metric__label">Active</span>
+          <span className="ff-mobile-metric__label">{t('mobile.active')}</span>
           <span className="ff-mobile-metric__value">{runningCount}</span>
         </div>
         <div className="ff-mobile-metric">
-          <span className="ff-mobile-metric__label">In-flight</span>
+          <span className="ff-mobile-metric__label">{t('mobile.inFlight')}</span>
           <span className="ff-mobile-metric__value">{transitPackets.length}</span>
         </div>
         <div className="ff-mobile-metric">
-          <span className="ff-mobile-metric__label">Events</span>
+          <span className="ff-mobile-metric__label">{t('mobile.eventsCount')}</span>
           <span className="ff-mobile-metric__value">{timeline.length}</span>
         </div>
         <div className="ff-mobile-metric">
-          <span className="ff-mobile-metric__label">Failed</span>
+          <span className="ff-mobile-metric__label">{t('mobile.failed')}</span>
           <span
             className={`ff-mobile-metric__value${failedCount > 0 ? ' ff-mobile-metric__value--alert' : ''}`}
           >
@@ -65,13 +68,13 @@ export function MobileRuntimeView() {
         </div>
         {avgLatency != null ? (
           <div className="ff-mobile-metric">
-            <span className="ff-mobile-metric__label">Avg latency</span>
+            <span className="ff-mobile-metric__label">{t('mobile.avgLatency')}</span>
             <span className="ff-mobile-metric__value">{avgLatency}ms</span>
           </div>
         ) : null}
         {avgSuccess != null ? (
           <div className="ff-mobile-metric">
-            <span className="ff-mobile-metric__label">Success</span>
+            <span className="ff-mobile-metric__label">{t('mobile.success')}</span>
             <span className="ff-mobile-metric__value">{formatMetricPercent(avgSuccess)}</span>
           </div>
         ) : null}
@@ -79,18 +82,18 @@ export function MobileRuntimeView() {
 
       {failureReason ? (
         <div className="ff-mobile-runtime__alert" role="alert">
-          <strong>Runtime alert</strong>
+          <strong>{t('mobile.runtimeAlert')}</strong>
           <p>{failureReason}</p>
         </div>
       ) : null}
 
-      <section className="ff-mobile-runtime__theme" aria-label="Topology theme">
-        <h3>Visual theme</h3>
+      <section className="ff-mobile-runtime__theme" aria-label={t('aria.topologyTheme')}>
+        <h3>{t('mobile.visualTheme')}</h3>
         <TopologyThemePicker />
       </section>
 
-      <section className="ff-mobile-runtime__cases" aria-label="Simulation cases">
-        <h3>Transaction cases</h3>
+      <section className="ff-mobile-runtime__cases" aria-label={t('aria.simulationCases')}>
+        <h3>{t('mobile.transactionCases')}</h3>
         <PlaygroundCaseBar />
       </section>
     </div>

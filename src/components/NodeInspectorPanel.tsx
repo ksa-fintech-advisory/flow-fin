@@ -1,4 +1,6 @@
 import { useMemo, type CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import type { FDLNode, FDLEdge } from '../fdl/types'
 import {
   inspectorConfigForKind,
@@ -16,31 +18,26 @@ import { NODE_VISUALS } from '../rendering/nodeVisuals'
 import { NodeKindIcon } from '../rendering/nodeIcons'
 import { RuntimeLogStream } from './RuntimeLogStream'
 
-const TABS: { id: InspectorTab; label: string }[] = [
-  { id: 'runtime', label: 'Runtime' },
-  { id: 'overview', label: 'Overview' },
-  { id: 'config', label: 'Config' },
-  { id: 'logs', label: 'Logs' },
-]
+const TAB_IDS: InspectorTab[] = ['runtime', 'overview', 'config', 'logs']
 
-function kindTitle(kind: FDLNode['kind']): string {
-  if (kind === 'start') return 'Start'
-  if (kind === 'end') return 'End'
+function kindTitle(t: TFunction, kind: FDLNode['kind']): string {
+  if (kind === 'start') return t('inspector.kind.start')
+  if (kind === 'end') return t('inspector.kind.end')
   return kind.replace(/_/g, ' ')
 }
 
-function healthLabel(state: string): { label: string; tone: string } {
+function healthLabel(t: TFunction, state: string): { label: string; tone: string } {
   switch (state) {
     case 'running':
-      return { label: 'Propagating', tone: 'active' }
+      return { label: t('inspector.health.propagating'), tone: 'active' }
     case 'success':
-      return { label: 'Healthy', tone: 'ok' }
+      return { label: t('inspector.health.healthy'), tone: 'ok' }
     case 'failed':
-      return { label: 'Degraded', tone: 'error' }
+      return { label: t('inspector.health.degraded'), tone: 'error' }
     case 'retrying':
-      return { label: 'Retrying', tone: 'warn' }
+      return { label: t('inspector.health.retrying'), tone: 'warn' }
     default:
-      return { label: 'Standby', tone: 'idle' }
+      return { label: t('inspector.health.standby'), tone: 'idle' }
   }
 }
 
@@ -54,15 +51,17 @@ function EdgeList({
   edges,
   nodes,
   direction,
+  t,
 }: {
   edges: FDLEdge[]
   nodes: FDLNode[]
   direction: 'in' | 'out'
+  t: TFunction
 }) {
   if (edges.length === 0) {
     return (
       <p className="ff-detail-empty">
-        No {direction === 'in' ? 'incoming' : 'outgoing'} edges
+        {direction === 'in' ? t('inspector.noIncoming') : t('inspector.noOutgoing')}
       </p>
     )
   }
@@ -108,6 +107,7 @@ function ConfigField({
 }
 
 export function NodeInspectorPanel() {
+  const { t } = useTranslation()
   const selectedId = useUiStore((s) => s.selectedNodeId)
   const tab = useUiStore((s) => s.inspectorTab)
   const setSelectedNodeId = useUiStore((s) => s.setSelectedNodeId)
@@ -142,7 +142,7 @@ export function NodeInspectorPanel() {
     const configGroups = inspectorConfigForKind(node.kind, node.id)
     const payload = samplePayloadForKind(node.kind, node.id)
     const runtimeState = nodeStates[node.id] ?? 'idle'
-    const health = healthLabel(runtimeState)
+    const health = healthLabel(t, runtimeState)
     const timing = nodeTiming[node.id]
 
     const relatedEvents = timeline.filter((ev) => ev.nodeId === node.id)
@@ -199,6 +199,7 @@ export function NodeInspectorPanel() {
     failureReason,
     nodeFailureMessages,
     activeCaseId,
+    t,
   ])
 
   if (!node || !context) {
@@ -208,15 +209,15 @@ export function NodeInspectorPanel() {
           <div className="ff-node-inspector__empty-brand">
             <FlowFinLogoMark size={28} className="ff-node-inspector__empty-icon" />
             <div>
-              <h2>Node inspector</h2>
-              <p>Select a node to inspect runtime traces, payloads, and operational logs.</p>
+              <h2>{t('inspector.title')}</h2>
+              <p>{t('inspector.emptyHint')}</p>
             </div>
           </div>
         </header>
         <div className="ff-node-inspector__placeholder ff-node-inspector__placeholder--live">
           <div className="ff-node-inspector__placeholder-rings" aria-hidden />
-          <p>Topology armed</p>
-          <span>Select a node or run simulation to inspect propagation</span>
+          <p>{t('inspector.armed')}</p>
+          <span>{t('inspector.armedHint')}</span>
         </div>
       </aside>
     )
@@ -245,13 +246,13 @@ export function NodeInspectorPanel() {
           </span>
           <div className="ff-node-inspector__titles">
             <h2>{node.label ?? node.id}</h2>
-            <span className="ff-node-inspector__kind">{kindTitle(node.kind)}</span>
+            <span className="ff-node-inspector__kind">{kindTitle(t, node.kind)}</span>
           </div>
           <button
             type="button"
             className="ff-node-inspector__close"
             onClick={() => setSelectedNodeId(null)}
-            aria-label="Close inspector"
+            aria-label={t('aria.closeInspector')}
           >
             ×
           </button>
@@ -263,20 +264,20 @@ export function NodeInspectorPanel() {
           <span className={`ff-status-pill ff-status-pill--${context.runtimeState}`}>
             {context.runtimeState}
           </span>
-          <span className="ff-node-inspector__phase">Phase · {phase}</span>
+          <span className="ff-node-inspector__phase">{t('inspector.phaseLabel', { phase })}</span>
         </div>
 
         <nav className="ff-inspector-tabs" role="tablist">
-          {TABS.map((t) => (
+          {TAB_IDS.map((tabId) => (
             <button
-              key={t.id}
+              key={tabId}
               type="button"
               role="tab"
-              aria-selected={tab === t.id}
-              className={`ff-inspector-tabs__btn ${tab === t.id ? 'ff-inspector-tabs__btn--active' : ''}`}
-              onClick={() => setInspectorTab(t.id)}
+              aria-selected={tab === tabId}
+              className={`ff-inspector-tabs__btn ${tab === tabId ? 'ff-inspector-tabs__btn--active' : ''}`}
+              onClick={() => setInspectorTab(tabId)}
             >
-              {t.label}
+              {t(`inspector.tabs.${tabId}`)}
             </button>
           ))}
         </nav>
@@ -287,36 +288,36 @@ export function NodeInspectorPanel() {
           <>
             <section className="ff-detail-section ff-runtime-trace">
               <div className="ff-runtime-trace__head">
-                <h3>Execution status</h3>
-                <span className="ff-runtime-trace__badge">Runtime trace</span>
+                <h3>{t('inspector.executionStatus')}</h3>
+                <span className="ff-runtime-trace__badge">{t('inspector.runtimeTrace')}</span>
               </div>
               <div className="ff-runtime-metrics ff-runtime-metrics--trace">
                 <div className="ff-runtime-metric">
-                  <span className="ff-runtime-metric__label">State</span>
+                  <span className="ff-runtime-metric__label">{t('inspector.state')}</span>
                   <span className={`ff-status-pill ff-status-pill--${context.runtimeState}`}>
                     {context.runtimeState}
                   </span>
                 </div>
                 <div className="ff-runtime-metric">
-                  <span className="ff-runtime-metric__label">Global step</span>
+                  <span className="ff-runtime-metric__label">{t('inspector.globalStep')}</span>
                   <span className="ff-runtime-metric__value">{context.stepLabel}</span>
                 </div>
                 <div className="ff-runtime-metric">
-                  <span className="ff-runtime-metric__label">Spine</span>
+                  <span className="ff-runtime-metric__label">{t('inspector.spine')}</span>
                   <span className="ff-runtime-metric__value">
                     {context.seqIndex >= 0
                       ? `${context.seqIndex + 1}/${context.seqTotal}`
-                      : 'off-spine'}
+                      : t('common.offSpine')}
                   </span>
                 </div>
               </div>
             </section>
 
             <section className="ff-detail-section">
-              <h3>Timing</h3>
+              <h3>{t('inspector.timing')}</h3>
               <dl className="ff-detail-dl ff-detail-dl--timing">
                 <div>
-                  <dt>Started</dt>
+                  <dt>{t('inspector.started')}</dt>
                   <dd className="ff-detail-dl__mono">
                     {context.timing?.startedAt
                       ? new Date(context.timing.startedAt).toLocaleTimeString()
@@ -324,7 +325,7 @@ export function NodeInspectorPanel() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Completed</dt>
+                  <dt>{t('inspector.completed')}</dt>
                   <dd className="ff-detail-dl__mono">
                     {context.timing?.completedAt
                       ? new Date(context.timing.completedAt).toLocaleTimeString()
@@ -332,15 +333,15 @@ export function NodeInspectorPanel() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Duration</dt>
+                  <dt>{t('inspector.duration')}</dt>
                   <dd>{formatDuration(context.timing?.durationMs)}</dd>
                 </div>
                 <div>
-                  <dt>Attempt</dt>
+                  <dt>{t('inspector.attempt')}</dt>
                   <dd>{context.timing?.attempt ?? '—'}</dd>
                 </div>
                 <div>
-                  <dt>Step delay</dt>
+                  <dt>{t('inspector.stepDelay')}</dt>
                   <dd>{flow.simulation?.stepDelayMs ?? 1000}ms</dd>
                 </div>
               </dl>
@@ -492,9 +493,9 @@ export function NodeInspectorPanel() {
             <section className="ff-detail-section">
               <h3>Topology</h3>
               <p className="ff-detail-subhead">Incoming</p>
-              <EdgeList edges={context.incoming} nodes={flow.nodes} direction="in" />
+              <EdgeList edges={context.incoming} nodes={flow.nodes} direction="in" t={t} />
               <p className="ff-detail-subhead">Outgoing</p>
-              <EdgeList edges={context.outgoing} nodes={flow.nodes} direction="out" />
+              <EdgeList edges={context.outgoing} nodes={flow.nodes} direction="out" t={t} />
             </section>
           </>
         )}

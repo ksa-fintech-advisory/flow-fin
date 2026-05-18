@@ -1,4 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+html[lang='ar'] {
+  --font-sans: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
+  --font-display: 'Amiri Quran', 'IBM Plex Sans Arabic', Georgia, serif;
+}
 
 *,
 *::before,
@@ -14,7 +25,7 @@ body,
 }
 
 body {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.45;
   color: #e2e8f0;
@@ -22,6 +33,25 @@ body {
     radial-gradient(900px 500px at 90% 10%, rgba(56, 189, 248, 0.08), transparent 50%),
     #070b14;
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.ff-home__hero h1,
+.ff-home__section-head h2,
+.ff-cap-card h3,
+.ff-scenario-card__title,
+.ff-mobile-orchestration__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+html[lang='ar'] h1,
+html[lang='ar'] h2,
+html[lang='ar'] h3 {
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .ff-shell {
@@ -1799,6 +1829,50 @@ body {
   background: rgba(15, 23, 42, 0.5);
 }
 
+html[dir='rtl'] .ff-scenario-card__arrow {
+  transform: scaleX(-1);
+}
+
+html[dir='rtl'] .ff-detail-edge__arrow {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+.ff-lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.ff-lang-switch__btn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.ff-lang-switch__btn:hover {
+  color: #e2e8f0;
+}
+
+.ff-lang-switch__btn--active {
+  color: #f8fafc;
+  background: rgba(56, 189, 248, 0.2);
+}
+
+.ff-orchestration__controls .ff-lang-switch {
+  margin-inline-end: 4px;
+}
+
 .ff-btn--lg {
   padding: 11px 20px;
   font-size: 14px;
@@ -1978,7 +2052,7 @@ body {
 .ff-home-preview__node-label {
   fill: #cbd5e1;
   font-size: 10px;
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-weight: 600;
 }
 

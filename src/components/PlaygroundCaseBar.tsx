@@ -1,6 +1,7 @@
 import type { SimulationCase } from '../fdl/types'
+import { useTranslation } from 'react-i18next'
 import { PlaygroundTransportButton } from './PlaygroundTransportButton'
-import { OUTCOME_LABEL, parseCaseLabel } from './playgroundCaseUi'
+import { outcomeLabels, parseCaseLabel } from './playgroundCaseUi'
 import { useGraphStore } from '../stores/useGraphStore'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
 
@@ -33,6 +34,8 @@ function CaseButton({
 
 /** Bottom-center outcomes + prominent example for the selected case. */
 export function PlaygroundCaseBar() {
+  const { t } = useTranslation()
+  const labels = outcomeLabels(t)
   const flow = useGraphStore((s) => s.flow)
   const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
   const selectCase = useRuntimeStore((s) => s.selectCase)
@@ -51,15 +54,15 @@ export function PlaygroundCaseBar() {
     <div
       className={`ff-case-dock ff-case-dock--${outcome}`}
       role="region"
-      aria-label="Simulation outcomes"
+      aria-label={t('aria.simulationOutcomes')}
     >
       {activeCase?.context ? (
         <div className="ff-case-bar__example" id="playground-case-example">
           <div className="ff-case-bar__example-head">
-            <span className="ff-case-bar__example-kicker">Example scenario</span>
+            <span className="ff-case-bar__example-kicker">{t('playground.exampleScenario')}</span>
             {activeParsed ? (
               <span className={`ff-case-bar__example-badge ff-case-bar__example-badge--${outcome}`}>
-                {OUTCOME_LABEL[outcome]}
+                {labels[outcome]}
               </span>
             ) : null}
           </div>
@@ -70,8 +73,8 @@ export function PlaygroundCaseBar() {
         </div>
       ) : null}
 
-      <div className="ff-case-bar" role="toolbar" aria-label="What happens">
-        <span className="ff-case-bar__label">What happens</span>
+      <div className="ff-case-bar" role="toolbar" aria-label={t('playground.whatHappens')}>
+        <span className="ff-case-bar__label">{t('playground.caseBarLabel')}</span>
         <div className="ff-case-bar__group" role="group" aria-describedby="playground-case-example">
           {cases.map((c) => (
             <CaseButton

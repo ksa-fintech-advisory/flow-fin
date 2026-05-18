@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { FlowDefinition } from '../../fdl/types'
 import type { DeviceClass } from '../../hooks/useDeviceClass'
 import { FlowCanvas, type CanvasMode } from '../../rendering/FlowCanvas'
@@ -26,6 +27,7 @@ function canvasModeFor(deviceClass: DeviceClass): CanvasMode {
  * Adaptive companion shell — runtime observability first, not shrunk desktop IDE.
  */
 export function MobilePlaygroundShell({ flow, scenarioId, deviceClass }: MobilePlaygroundShellProps) {
+  const { t } = useTranslation()
   const panel = useUiStore((s) => s.mobilePanel)
 
   const canvasMode = canvasModeFor(deviceClass)
@@ -37,12 +39,12 @@ export function MobilePlaygroundShell({ flow, scenarioId, deviceClass }: MobileP
       <main
         id="main-content"
         className="ff-mobile-main"
-        aria-label="Runtime companion"
+        aria-label={t('aria.runtimeCompanion')}
         data-panel={panel}
       >
         <section
           className={`ff-mobile-panel ff-mobile-panel--topology${panel === 'topology' ? ' ff-mobile-panel--active' : ''}`}
-          aria-label="Topology"
+          aria-label={t('aria.topology')}
           aria-hidden={panel !== 'topology'}
         >
           <FlowCanvas key={scenarioId} flow={flow} canvasMode={canvasMode} />
@@ -50,14 +52,14 @@ export function MobilePlaygroundShell({ flow, scenarioId, deviceClass }: MobileP
         </section>
         <section
           className={`ff-mobile-panel ff-mobile-panel--events${panel === 'events' ? ' ff-mobile-panel--active' : ''}`}
-          aria-label="Event stream"
+          aria-label={t('aria.eventStream')}
           aria-hidden={panel !== 'events'}
         >
           <MobileEventsView />
         </section>
         <section
           className={`ff-mobile-panel ff-mobile-panel--runtime${panel === 'runtime' ? ' ff-mobile-panel--active' : ''}`}
-          aria-label="Runtime controls"
+          aria-label={t('aria.runtimeControls')}
           aria-hidden={panel !== 'runtime'}
         >
           <MobileRuntimeView />

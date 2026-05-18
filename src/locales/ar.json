@@ -1,0 +1,259 @@
+
+{
+  "brand": {
+    "name": "FlowFin"
+  },
+  "language": {
+    "label": "اللغة",
+    "ar": "العربية",
+    "en": "English"
+  },
+  "skipLink": "الانتقال إلى المحتوى الرئيسي",
+  "aria": {
+    "home": "الصفحة الرئيسية لـ FlowFin",
+    "primaryNav": "التنقل الرئيسي",
+    "playgroundMain": "بيئة محاكاة التدفقات المالية",
+    "inspectorSidebar": "لوحة الفحص وسجل الأحداث",
+    "topologyRadar": "خريطة التدفقات",
+    "exampleFlows": "أمثلة التدفقات",
+    "allScenarios": "عرض جميع السيناريوهات",
+    "closeInspector": "إغلاق لوحة الفحص",
+    "nodeInspector": "تفاصيل العقدة",
+    "simulationSpeed": "سرعة المحاكاة",
+    "concurrentPropagations": "عمليات متزامنة",
+    "inFlightPropagations": "عمليات جارية",
+    "runtimeOrchestration": "تنسيق العمليات التشغيلية",
+    "runtimeCompanion": "مراقبة العمليات",
+    "topology": "الخريطة التشغيلية",
+    "eventStream": "سجل الأحداث",
+    "runtimeControls": "عناصر التحكم",
+    "topologyNodes": "عقد التدفق",
+    "companionViews": "طرق العرض",
+    "runtimePlayback": "إعادة التشغيل",
+    "runtimeMetrics": "مؤشرات الأداء",
+    "topologyTheme": "السمة",
+    "simulationCases": "سيناريوهات المحاكاة",
+    "simulationOutcomes": "نتائج المحاكاة",
+    "aiCopilot": "المساعد الذكي"
+  },
+  "meta": {
+    "tagline": "منصة لمحاكاة وتنسيق الأنظمة المالية",
+    "description": "FlowFin منصة تفاعلية لتصميم ومحاكاة وتتبع التدفقات المالية — مع رؤية تشغيلية مباشرة لكل عقدة ومسار داخل البنية المالية.",
+    "homeTitle": "FlowFin · محاكاة وتنسيق الأنظمة المالية",
+    "playgroundTitle": "{{title}} · بيئة المحاكاة",
+    "playgroundDescription": "{{subtitle}} — تتبع حركة العمليات المالية، وفحص العقد، ومراقبة سلوك النظام بشكل مباشر داخل FlowFin.",
+    "ogImageAlt": "FlowFin — منصة لمحاكاة وتتبع التدفقات المالية",
+    "twitterImageAlt": "FlowFin — منصة مراقبة ومحاكاة الأنظمة المالية"
+  },
+  "phase": {
+    "idle": "جاهز",
+    "running": "قيد التشغيل",
+    "paused": "متوقف مؤقتاً",
+    "completed": "مكتمل"
+  },
+  "outcome": {
+    "success": "نجاح",
+    "failure": "فشل",
+    "retry": "إعادة محاولة",
+    "warning": "مراجعة",
+    "neutral": "مسار"
+  },
+  "domain": {
+    "general": "عام",
+    "payments": "المدفوعات",
+    "treasury": "الخزينة",
+    "crypto": "العملات الرقمية",
+    "risk": "المخاطر"
+  },
+  "transport": {
+    "play": "تشغيل المحاكاة",
+    "pause": "إيقاف مؤقت",
+    "resume": "استئناف",
+    "playAgain": "إعادة التشغيل",
+    "again": "إعادة",
+    "playShort": "تشغيل"
+  },
+  "common": {
+    "speed": "السرعة",
+    "reset": "إعادة تعيين",
+    "step": "المرحلة",
+    "stepProgress": "المرحلة {{current}} من {{total}}",
+    "timeline": "الخط الزمني",
+    "replay": "إعادة التشغيل",
+    "theme": "السمة",
+    "nodes": "العقد",
+    "edges": "المسارات",
+    "nodesCount": "{{count}} عقدة",
+    "edgesCount": "{{count}} مسار",
+    "runtime": "Runtime",
+    "all": "الكل",
+    "flows": "التدفقات",
+    "zoomIn": "تكبير",
+    "zoomOut": "تصغير",
+    "fitView": "ملاءمة العرض",
+    "inFlight": "{{count}} عملية جارية",
+    "offSpine": "خارج المسار الرئيسي"
+  },
+  "home": {
+    "navPill": "مراقبة العمليات",
+    "launchPlayground": "فتح بيئة المحاكاة",
+    "eyebrow": "طبقة تشغيل ومراقبة الأنظمة المالية",
+    "heroTitle": "نسّق تدفقات الأموال عبر",
+    "heroHighlight": "خريطة تشغيلية حية",
+    "lead": "FlowFin منصة تفاعلية لتصميم ومحاكاة ومراقبة التدفقات المالية، مع رؤية تشغيلية مباشرة لكل عقدة ومسار وحركة داخل النظام.",
+    "openPlayground": "فتح بيئة المحاكاة",
+    "browseTopologies": "استعراض التدفقات",
+    "statsScenarios": "السيناريوهات",
+    "statsNodes": "العقد",
+    "statsSimulation": "المحاكاة",
+    "statsSimulationValue": "تشغيل مباشر",
+    "statsLayout": "التخطيط",
+    "statsLayoutValue": "ELK · Layout",
+    "capabilitiesHeading": "قدرات المنصة",
+    "capTopologyTitle": "ذكاء التدفقات",
+    "capTopologyBody": "مخططات تشغيلية ذكية بمسارات مترابطة توضح حركة الطلبات والاستجابات داخل النظام المالي.",
+    "capRuntimeTitle": "محاكاة العمليات",
+    "capRuntimeBody": "تشغيل حي للتدفقات مع تتبع الحركات، وإظهار حالات الفشل وإعادة المحاولة ومسارات التنفيذ.",
+    "capInspectorTitle": "فحص العقد",
+    "capInspectorBody": "لوحات فحص متقدمة لإعدادات التكامل، وإعادة المحاولة، والرسوم، وسجل التنفيذ لكل عقدة مالية.",
+    "scenariosTitle": "قوالب التدفقات",
+    "scenariosLead": "{{count}} سيناريو جاهز · ابدأ محاكاة مباشرة للتدفقات المالية",
+    "runSimulation": "تشغيل المحاكاة",
+    "footer": "FlowFin · محاكاة التدفقات المالية · مراقبة الأنظمة التشغيلية"
+  },
+  "playground": {
+    "whatHappens": "ماذا يحدث",
+    "exampleScenario": "سيناريو تجريبي",
+    "caseBarLabel": "سير العمليات"
+  },
+  "canvas": {
+    "loadingTitle": "جارٍ تجهيز الخريطة التشغيلية",
+    "loadingDetail": "جارٍ حساب توزيع العقد والمسارات…",
+    "inspectorOpenHint": "لوحة الفحص مفتوحة · اضغط Esc للإغلاق",
+    "clickNodeHint": "اختر أي عقدة لعرض التفاصيل",
+    "pinchHint": "قرّب للتكبير · اسحب للتحريك"
+  },
+  "themes": {
+    "darkOps": "الوضع الداكن",
+    "fintechNeon": "نيون التقنية المالية",
+    "enterpriseInfra": "البنية المؤسسية",
+    "runtimeTerminal": "وضع الطرفية"
+  },
+  "timeline": {
+    "title": "سجل الأحداث",
+    "subtitle": "تتبع مباشر لحركة العمليات",
+    "idle": "لا توجد عمليات حالياً",
+    "idleHint": "ابدأ المحاكاة لعرض حركة العمليات داخل النظام"
+  },
+  "copilot": {
+    "badge": "AI Operations",
+    "title": "المساعد الذكي",
+    "subtitle": "اقتراحات تشغيلية ومراقبة ذكية · نسخة تجريبية"
+  },
+  "inspector": {
+    "title": "تفاصيل العقدة",
+    "emptyHint": "اختر عقدة لعرض السجلات، والحالة التشغيلية، والبيانات المرتبطة بها.",
+    "armed": "النظام جاهز",
+    "armedHint": "اختر عقدة أو ابدأ المحاكاة لعرض حركة العمليات",
+    "tabs": {
+      "runtime": "Runtime",
+      "overview": "نظرة عامة",
+      "config": "الإعدادات",
+      "logs": "السجلات"
+    },
+    "health": {
+      "propagating": "قيد التنفيذ",
+      "healthy": "سليم",
+      "degraded": "متأثر",
+      "retrying": "يعيد المحاولة",
+      "standby": "في وضع الاستعداد"
+    },
+    "kind": {
+      "start": "بداية",
+      "end": "نهاية"
+    },
+    "phaseLabel": "الحالة · {{phase}}",
+    "noIncoming": "لا توجد اتصالات واردة",
+    "noOutgoing": "لا توجد اتصالات صادرة",
+    "executionStatus": "حالة التنفيذ",
+    "runtimeTrace": "سجل العمليات",
+    "state": "الحالة",
+    "globalStep": "المرحلة الحالية",
+    "spine": "المسار الرئيسي",
+    "timing": "التوقيت",
+    "started": "بدأ",
+    "completed": "اكتمل",
+    "duration": "المدة",
+    "attempt": "المحاولة",
+    "stepDelay": "مدة التأخير"
+  },
+  "mobile": {
+    "topology": "الخريطة",
+    "topologyHint": "استعرض التدفقات والعقد",
+    "events": "الأحداث",
+    "eventsHint": "مراقبة العمليات",
+    "runtime": "Runtime",
+    "runtimeHint": "التشغيل والمقاييس",
+    "eventsTitle": "سجل العمليات",
+    "eventsSubtitle": "تتبع مباشر لحركة العمليات المالية",
+    "runtimeTitle": "مراقبة النظام",
+    "runtimeSubtitle": "الحالة · المقاييس · نتائج التشغيل",
+    "phase": "الحالة",
+    "active": "نشط",
+    "inFlight": "قيد التنفيذ",
+    "eventsCount": "الأحداث",
+    "failed": "فشل",
+    "avgLatency": "متوسط التأخير",
+    "success": "نجاح",
+    "runtimeAlert": "تنبيه تشغيلي",
+    "visualTheme": "السمة",
+    "transactionCases": "سيناريوهات المعاملات"
+  },
+  "desktopGate": {
+    "title": "يفضّل استخدام شاشة أكبر",
+    "body": "{{brand}} يقدم أفضل تجربة تشغيل ومحاكاة على أجهزة سطح المكتب أو الشاشات الكبيرة.",
+    "reasonLayout": "وضوح المخطط والتوزيع",
+    "reasonPropagation": "عرض حركة العمليات بشكل كامل",
+    "reasonInspector": "لوحات الفحص والسجلات التشغيلية",
+    "hint": "يمكنك فتح FlowFin من جهاز كمبيوتر أو توسيع نافذة المتصفح للحصول على أفضل تجربة."
+  },
+  "scenarios": {
+    "card-payment": {
+      "title": "دفع بالبطاقة",
+      "subtitle": "العميل → التاجر → التفويض → التسوية بعد خصم الرسوم"
+    },
+    "card-capture": {
+      "title": "تحصيل المدفوعات",
+      "subtitle": "التحقق → الاحتيال → الموافقة → التسوية مع إعادة المحاولة"
+    },
+    "instant-refund": {
+      "title": "استرداد فوري",
+      "subtitle": "المحفظة → الفحص → الموافقة أو المراجعة → تحديث السجل"
+    },
+    "crypto-onramp": {
+      "title": "شراء العملات الرقمية",
+      "subtitle": "المحفظة → التوجيه → التحقق → مسار التسوية"
+    },
+    "treasury-sweep": {
+      "title": "تجميع الخزينة",
+      "subtitle": "تجميع المدفوعات → التوجيه → التسوية → المحافظ"
+    },
+    "batch-payout": {
+      "title": "دفعات مجمعة",
+      "subtitle": "توزيع عمليات الدفع → تسوية متوازية → تجميع نهائي"
+    },
+    "cross-border-fx": {
+      "title": "تحويل دولي",
+      "subtitle": "التوجيه → التحقق → الموافقة → التسوية"
+    },
+    "chargeback": {
+      "title": "اعتراض مالي",
+      "subtitle": "الدفتر → الاحتيال → المراجعة → تسوية الاسترداد"
+    },
+    "fraud-escalation": {
+      "title": "تصعيد الاحتيال",
+      "subtitle": "عملية مشبوهة → فحص متقدم → مراجعة يدوية"
+    }
+  }
+}
+

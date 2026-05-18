@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Background,
   BackgroundVariant,
@@ -27,6 +28,7 @@ import { MobileCanvasHud } from '../components/mobile/MobileCanvasHud'
 import { PlaygroundCaseBar } from '../components/PlaygroundCaseBar'
 import { PlaygroundToolbar } from '../components/PlaygroundToolbar'
 import { TopologyThemePicker } from '../components/TopologyThemePicker'
+import { phaseLabel } from '../i18n/helpers'
 import { MobileNodeFocus } from './MobileNodeFocus'
 import { useUiStore } from '../stores/useUiStore'
 import { ExecutionEdge } from './edges/ExecutionEdge'
@@ -69,6 +71,7 @@ function FlowCanvasInner({
   flow: FlowDefinition
   canvasMode?: CanvasMode
 }) {
+  const { t } = useTranslation()
   const isMobileCanvas = canvasMode === 'mobile'
   const isCompanionCanvas = canvasMode !== 'desktop'
   const selectedNodeId = useUiStore((s) => s.selectedNodeId)
@@ -302,8 +305,8 @@ function FlowCanvasInner({
       {!elkNodes ? (
         <div className="ff-canvas-loading" role="status" aria-live="polite">
           <FlowFinLogoMark size={36} title="FlowFin" />
-          <p className="ff-canvas-loading__title">Preparing topology layout</p>
-          <p className="ff-canvas-loading__detail">Computing ELK graph coordinates…</p>
+          <p className="ff-canvas-loading__title">{t('canvas.loadingTitle')}</p>
+          <p className="ff-canvas-loading__detail">{t('canvas.loadingDetail')}</p>
         </div>
       ) : (
         <ReactFlow
@@ -350,7 +353,7 @@ function FlowCanvasInner({
             pannable
             zoomable
             maskColor="rgba(15, 23, 42, 0.88)"
-            ariaLabel="Topology radar"
+            ariaLabel={t('aria.topologyRadar')}
             nodeColor={(n) => {
               const state = nodeStates[n.id]
               if (state === 'running') return '#38bdf8'
@@ -378,17 +381,17 @@ function FlowCanvasInner({
             <TopologyThemePicker />
             <div className="ff-runtime-chip">
               <span className={`ff-runtime-chip__dot ff-runtime-chip__dot--${phase}`} />
-              <span className="ff-runtime-chip__label">{phase}</span>
+              <span className="ff-runtime-chip__label">{phaseLabel(t, phase)}</span>
               {transitPackets.length > 0 ? (
-                <span className="ff-runtime-chip__queue" title="Concurrent propagations">
-                  {transitPackets.length} in-flight
+                <span className="ff-runtime-chip__queue" title={t('aria.concurrentPropagations')}>
+                  {t('common.inFlight', { count: transitPackets.length })}
                 </span>
               ) : null}
             </div>
             {selectedNodeId ? (
-              <span className="ff-canvas-overlay__hint">Inspector open · Esc to clear</span>
+              <span className="ff-canvas-overlay__hint">{t('canvas.inspectorOpenHint')}</span>
             ) : (
-              <span className="ff-canvas-overlay__hint">Click node to inspect</span>
+              <span className="ff-canvas-overlay__hint">{t('canvas.clickNodeHint')}</span>
             )}
           </Panel>
           )}

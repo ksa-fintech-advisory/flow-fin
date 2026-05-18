@@ -1,0 +1,257 @@
+{
+  "brand": {
+    "name": "FlowFin"
+  },
+  "language": {
+    "label": "Language",
+    "ar": "العربية",
+    "en": "English"
+  },
+  "skipLink": "Skip to main content",
+  "aria": {
+    "home": "FlowFin home",
+    "primaryNav": "Primary",
+    "playgroundMain": "Runtime topology playground",
+    "inspectorSidebar": "Inspector and event stream",
+    "topologyRadar": "Topology radar",
+    "exampleFlows": "Example flows",
+    "allScenarios": "View all scenarios on home",
+    "closeInspector": "Close inspector",
+    "nodeInspector": "Node inspector",
+    "simulationSpeed": "Simulation speed",
+    "concurrentPropagations": "Concurrent propagations",
+    "inFlightPropagations": "In-flight propagations",
+    "runtimeOrchestration": "Runtime orchestration",
+    "runtimeCompanion": "Runtime companion",
+    "topology": "Topology",
+    "eventStream": "Event stream",
+    "runtimeControls": "Runtime controls",
+    "topologyNodes": "Topology nodes",
+    "companionViews": "Companion views",
+    "runtimePlayback": "Runtime playback",
+    "runtimeMetrics": "Runtime metrics",
+    "topologyTheme": "Topology theme",
+    "simulationCases": "Simulation cases",
+    "simulationOutcomes": "Simulation outcomes",
+    "aiCopilot": "AI operations assistant"
+  },
+  "meta": {
+    "tagline": "Fintech orchestration & financial runtime visualization",
+    "description": "FlowFin is a fintech orchestration platform and financial systems IDE — model payment topologies, simulate runtime propagation, and observe transaction flows with infrastructure-grade visibility.",
+    "homeTitle": "FlowFin · Fintech orchestration & financial runtime visualization",
+    "playgroundTitle": "{{title}} · Runtime playground",
+    "playgroundDescription": "{{subtitle}} — simulate payment propagation, inspect nodes, and trace financial runtime behavior in FlowFin.",
+    "ogImageAlt": "FlowFin — fintech orchestration and financial runtime topology visualization",
+    "twitterImageAlt": "FlowFin — financial runtime visualization platform"
+  },
+  "phase": {
+    "idle": "Idle",
+    "running": "Running",
+    "paused": "Paused",
+    "completed": "Completed"
+  },
+  "outcome": {
+    "success": "Approved",
+    "failure": "Declined",
+    "retry": "Retry",
+    "warning": "Review",
+    "neutral": "Path"
+  },
+  "domain": {
+    "general": "general",
+    "payments": "payments",
+    "treasury": "treasury",
+    "crypto": "crypto",
+    "risk": "risk"
+  },
+  "transport": {
+    "play": "Play simulation",
+    "pause": "Pause",
+    "resume": "Resume",
+    "playAgain": "Play again",
+    "again": "Again",
+    "playShort": "Play"
+  },
+  "common": {
+    "speed": "Speed",
+    "reset": "Reset",
+    "step": "Step",
+    "stepProgress": "Step {{current}} / {{total}}",
+    "timeline": "Timeline",
+    "replay": "Replay",
+    "theme": "Theme",
+    "nodes": "Nodes",
+    "edges": "edges",
+    "nodesCount": "{{count}} nodes",
+    "edgesCount": "{{count}} edges",
+    "runtime": "Runtime",
+    "all": "All",
+    "flows": "Flows",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit view",
+    "inFlight": "{{count}} in-flight",
+    "offSpine": "off-spine"
+  },
+  "home": {
+    "navPill": "Runtime orchestration",
+    "launchPlayground": "Launch playground",
+    "eyebrow": "Financial runtime control plane",
+    "heroTitle": "Orchestrate money flows across",
+    "heroHighlight": "live topology",
+    "lead": "FlowFin is a fintech orchestration platform and financial systems IDE for modeling, simulating, and inspecting financial propagation — with operational visibility into every node, edge, and runtime handoff.",
+    "openPlayground": "Open runtime playground",
+    "browseTopologies": "Browse topologies",
+    "statsScenarios": "Scenarios",
+    "statsNodes": "Topology nodes",
+    "statsSimulation": "Simulation",
+    "statsSimulationValue": "Live propagation",
+    "statsLayout": "Layout",
+    "statsLayoutValue": "ELK · layered",
+    "capabilitiesHeading": "Platform capabilities",
+    "capTopologyTitle": "Topology intelligence",
+    "capTopologyBody": "Layered graph layouts with bidirectional rails — request paths and response corridors rendered as first-class operational topology.",
+    "capRuntimeTitle": "Runtime propagation",
+    "capRuntimeBody": "Step through simulations with packet-style edge payloads, decline paths, and per-node state — like tracing packets through infrastructure.",
+    "capInspectorTitle": "Node inspection",
+    "capInspectorBody": "Enterprise-grade inspectors for integration settings, retries, fees, routing, webhooks, and execution history on every financial node.",
+    "scenariosTitle": "Flow templates",
+    "scenariosLead": "{{count}} enterprise templates · launch topology simulations with live runtime propagation",
+    "runSimulation": "Run simulation",
+    "footer": "Fintech orchestration · payment topology simulation · financial runtime observability"
+  },
+  "playground": {
+    "whatHappens": "What happens",
+    "exampleScenario": "Example scenario",
+    "caseBarLabel": "What happens"
+  },
+  "canvas": {
+    "loadingTitle": "Preparing topology layout",
+    "loadingDetail": "Computing ELK graph coordinates…",
+    "inspectorOpenHint": "Inspector open · Esc to clear",
+    "clickNodeHint": "Click node to inspect",
+    "pinchHint": "Pinch to zoom · drag to pan"
+  },
+  "themes": {
+    "darkOps": "Dark Ops",
+    "fintechNeon": "Fintech Neon",
+    "enterpriseInfra": "Enterprise Infra",
+    "runtimeTerminal": "Runtime Terminal"
+  },
+  "timeline": {
+    "title": "Event stream",
+    "subtitle": "Operational trace · simulated propagation",
+    "idle": "Runtime idle",
+    "idleHint": "Start simulation to stream operational events across the topology"
+  },
+  "copilot": {
+    "badge": "AI Ops",
+    "title": "Runtime copilot",
+    "subtitle": "Mocked operational intelligence · preview"
+  },
+  "inspector": {
+    "title": "Node inspector",
+    "emptyHint": "Select a node to inspect runtime traces, payloads, and operational logs.",
+    "armed": "Topology armed",
+    "armedHint": "Select a node or run simulation to inspect propagation",
+    "tabs": {
+      "runtime": "Runtime",
+      "overview": "Overview",
+      "config": "Config",
+      "logs": "Logs"
+    },
+    "health": {
+      "propagating": "Propagating",
+      "healthy": "Healthy",
+      "degraded": "Degraded",
+      "retrying": "Retrying",
+      "standby": "Standby"
+    },
+    "kind": {
+      "start": "Start",
+      "end": "End"
+    },
+    "phaseLabel": "Phase · {{phase}}",
+    "noIncoming": "No incoming edges",
+    "noOutgoing": "No outgoing edges",
+    "executionStatus": "Execution status",
+    "runtimeTrace": "Runtime trace",
+    "state": "State",
+    "globalStep": "Global step",
+    "spine": "Spine",
+    "timing": "Timing",
+    "started": "Started",
+    "completed": "Completed",
+    "duration": "Duration",
+    "attempt": "Attempt",
+    "stepDelay": "Step delay"
+  },
+  "mobile": {
+    "topology": "Topology",
+    "topologyHint": "Graph & node focus",
+    "events": "Events",
+    "eventsHint": "Operational trace",
+    "runtime": "Runtime",
+    "runtimeHint": "Playback & metrics",
+    "eventsTitle": "Operational trace",
+    "eventsSubtitle": "Live propagation events · transaction replay context",
+    "runtimeTitle": "Runtime observability",
+    "runtimeSubtitle": "Metrics · playback · scenario outcomes",
+    "phase": "Phase",
+    "active": "Active",
+    "inFlight": "In-flight",
+    "eventsCount": "Events",
+    "failed": "Failed",
+    "avgLatency": "Avg latency",
+    "success": "Success",
+    "runtimeAlert": "Runtime alert",
+    "visualTheme": "Visual theme",
+    "transactionCases": "Transaction cases"
+  },
+  "desktopGate": {
+    "title": "Desktop environment required",
+    "body": "{{brand}} currently requires a desktop environment for the best orchestration and topology experience.",
+    "reasonLayout": "Graph readability and ELK layout",
+    "reasonPropagation": "Runtime propagation visualization",
+    "reasonInspector": "Node inspector and operational tracing",
+    "hint": "Widen your browser window or open this scenario on a laptop or desktop display."
+  },
+  "scenarios": {
+    "card-payment": {
+      "title": "Card payment",
+      "subtitle": "Checkout → merchant → auth chain → settlement net of fees"
+    },
+    "card-capture": {
+      "title": "Card capture",
+      "subtitle": "Ingest → fraud → approval → settlement + retry loop"
+    },
+    "instant-refund": {
+      "title": "Instant refund",
+      "subtitle": "Wallet → screening → route ok/challenge → ledger sync"
+    },
+    "crypto-onramp": {
+      "title": "Crypto on-ramp",
+      "subtitle": "Wallet → route chain → fraud → settlement rail"
+    },
+    "treasury-sweep": {
+      "title": "Treasury sweep",
+      "subtitle": "Rec batch → route destinations → settlement → wallets"
+    },
+    "batch-payout": {
+      "title": "Batch payout",
+      "subtitle": "Router splits payrails → parallel settle → single recon"
+    },
+    "cross-border-fx": {
+      "title": "Cross-border FX",
+      "subtitle": "Route corridor → fraud → approval → settle"
+    },
+    "chargeback": {
+      "title": "Chargeback dispute",
+      "subtitle": "Ledger hook → fraud → approval → settlement credit"
+    },
+    "fraud-escalation": {
+      "title": "Fraud escalation",
+      "subtitle": "Payment stuck → fraud loops → manual approval outlet"
+    }
+  }
+}

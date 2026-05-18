@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NODE_VISUALS } from '../../rendering/nodeVisuals'
 import { NodeKindIcon } from '../../rendering/nodeIcons'
 import { useGraphStore } from '../../stores/useGraphStore'
@@ -7,14 +8,15 @@ import { useUiStore } from '../../stores/useUiStore'
 
 /** Guided node chips for touch-first topology exploration. */
 export function MobileTopologyRail() {
+  const { t } = useTranslation()
   const flow = useGraphStore((s) => s.flow)
   const nodeStates = useRuntimeStore((s) => s.nodeStates)
   const selectedNodeId = useUiStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useUiStore((s) => s.setSelectedNodeId)
 
   return (
-    <nav className="ff-mobile-topology-rail" aria-label="Topology nodes">
-      <span className="ff-mobile-topology-rail__label">Nodes</span>
+    <nav className="ff-mobile-topology-rail" aria-label={t('aria.topologyNodes')}>
+      <span className="ff-mobile-topology-rail__label">{t('common.nodes')}</span>
       <ul className="ff-mobile-topology-rail__list">
         {flow.nodes.map((node) => {
           const visual = NODE_VISUALS[node.kind]

@@ -1,38 +1,93 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { FlowFinLogo } from '../brand/FlowFinLogo'
-import { HOME_META } from '../brand/site'
 import { TopologyBackground } from '../components/home/TopologyBackground'
 import { HomeTopologyPreview } from '../components/home/HomeTopologyPreview'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { PageMeta } from '../components/PageMeta'
 import { SkipLink } from '../components/SkipLink'
 import { DEFAULT_SCENARIO_ID, SCENARIOS } from '../fdl/scenarios'
-
-function domainLabel(domain: unknown): string {
-  if (typeof domain === 'string' && domain.length) return domain
-  return 'general'
-}
+import { domainLabel } from '../i18n/helpers'
+import { useScenarioDisplay } from '../hooks/useScenarioDisplay'
 
 function countNodes(scenario: (typeof SCENARIOS)[number]): number {
   return scenario.flow.nodes.length
 }
 
+function ScenarioCard({ scenario, index }: { scenario: (typeof SCENARIOS)[number]; index: number }) {
+  const { t } = useTranslation()
+  const { title, subtitle } = useScenarioDisplay(scenario)
+
+  return (
+    <li key={scenario.id}>
+      <Link
+        to={`/playground/${scenario.id}`}
+        className="ff-scenario-card ff-template-card"
+        style={{ animationDelay: `${index * 60}ms` }}
+      >
+        <div className="ff-template-card__preview" aria-hidden>
+          <span className="ff-template-card__pulse" />
+          <svg viewBox="0 0 120 48" className="ff-template-card__topology">
+            <path
+              d="M8 24 H40 M40 24 H72 M72 24 H104"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.45"
+            />
+            <circle cx="8" cy="24" r="3.5" fill="currentColor" />
+            <circle cx="40" cy="24" r="3.5" fill="currentColor" opacity="0.7" />
+            <circle cx="72" cy="24" r="3.5" fill="currentColor" opacity="0.7" />
+            <circle cx="104" cy="24" r="3.5" fill="currentColor" />
+          </svg>
+        </div>
+        <div className="ff-scenario-card__top">
+          <span className="ff-scenario-card__index">{String(index + 1).padStart(2, '0')}</span>
+          <span className="ff-scenario-card__domain">
+            {domainLabel(t, scenario.flow.metadata?.domain)}
+          </span>
+        </div>
+        <h3 className="ff-scenario-card__title">{title}</h3>
+        <p className="ff-scenario-card__subtitle">{subtitle}</p>
+        <div className="ff-scenario-card__meta">
+          <span>{t('common.nodesCount', { count: countNodes(scenario) })}</span>
+          <span>{t('common.edgesCount', { count: scenario.flow.edges.length })}</span>
+          <span>{t('common.runtime')}</span>
+        </div>
+        <span className="ff-scenario-card__cta">
+          {t('home.runSimulation')}
+          <span className="ff-scenario-card__arrow" aria-hidden>
+            →
+          </span>
+        </span>
+      </Link>
+    </li>
+  )
+}
+
 export function HomePage() {
+  const { t } = useTranslation()
   const totalNodes = SCENARIOS.reduce((n, s) => n + countNodes(s), 0)
 
   return (
     <div className="ff-home">
-      <PageMeta {...HOME_META} />
+      <PageMeta
+        title={t('meta.homeTitle')}
+        description={t('meta.description')}
+        path="/"
+      />
       <SkipLink />
       <TopologyBackground />
 
       <header className="ff-home__nav">
-        <Link to="/" className="ff-home__logo" aria-label="FlowFin home">
+        <Link to="/" className="ff-home__logo" aria-label={t('aria.home')}>
           <FlowFinLogo size={28} wordmarkClassName="ff-home__logo-text" />
         </Link>
-        <nav className="ff-home__nav-links" aria-label="Primary">
-          <span className="ff-home__nav-pill">Runtime orchestration</span>
+        <nav className="ff-home__nav-links" aria-label={t('aria.primaryNav')}>
+          <span className="ff-home__nav-pill">{t('home.navPill')}</span>
+          <LanguageSwitcher />
           <Link to={`/playground/${DEFAULT_SCENARIO_ID}`} className="ff-btn ff-btn--primary">
-            Launch playground
+            {t('home.launchPlayground')}
           </Link>
         </nav>
       </header>
@@ -42,44 +97,40 @@ export function HomePage() {
           <div className="ff-home__hero-copy">
             <p className="ff-home__eyebrow">
               <span className="ff-home__pulse" aria-hidden />
-              Financial runtime control plane
+              {t('home.eyebrow')}
             </p>
             <h1 id="home-hero-heading">
-              Orchestrate money flows across{' '}
-              <span className="ff-home__gradient-text">live topology</span>
+              {t('home.heroTitle')}{' '}
+              <span className="ff-home__gradient-text">{t('home.heroHighlight')}</span>
             </h1>
-            <p className="ff-home__lead">
-              FlowFin is a fintech orchestration platform and financial systems IDE for
-              modeling, simulating, and inspecting financial propagation — with operational
-              visibility into every node, edge, and runtime handoff.
-            </p>
+            <p className="ff-home__lead">{t('home.lead')}</p>
             <div className="ff-home__hero-actions">
               <Link
                 to={`/playground/${DEFAULT_SCENARIO_ID}`}
                 className="ff-btn ff-btn--primary ff-btn--lg"
               >
-                Open runtime playground
+                {t('home.openPlayground')}
               </Link>
               <a href="#scenarios" className="ff-btn ff-btn--ghost ff-btn--lg">
-                Browse topologies
+                {t('home.browseTopologies')}
               </a>
             </div>
             <dl className="ff-home__stats">
               <div>
-                <dt>Scenarios</dt>
+                <dt>{t('home.statsScenarios')}</dt>
                 <dd>{SCENARIOS.length}</dd>
               </div>
               <div>
-                <dt>Topology nodes</dt>
+                <dt>{t('home.statsNodes')}</dt>
                 <dd>{totalNodes}</dd>
               </div>
               <div>
-                <dt>Simulation</dt>
-                <dd>Live propagation</dd>
+                <dt>{t('home.statsSimulation')}</dt>
+                <dd>{t('home.statsSimulationValue')}</dd>
               </div>
               <div>
-                <dt>Layout</dt>
-                <dd>ELK · layered</dd>
+                <dt>{t('home.statsLayout')}</dt>
+                <dd>{t('home.statsLayoutValue')}</dd>
               </div>
             </dl>
           </div>
@@ -88,96 +139,40 @@ export function HomePage() {
 
         <section className="ff-home__capabilities" aria-labelledby="capabilities-heading">
           <h2 id="capabilities-heading" className="visually-hidden">
-            Platform capabilities
+            {t('home.capabilitiesHeading')}
           </h2>
           <article className="ff-cap-card">
             <span className="ff-cap-card__icon" aria-hidden>
               ◎
             </span>
-            <h3>Topology intelligence</h3>
-            <p>
-              Layered graph layouts with bidirectional rails — request paths and response
-              corridors rendered as first-class operational topology.
-            </p>
+            <h3>{t('home.capTopologyTitle')}</h3>
+            <p>{t('home.capTopologyBody')}</p>
           </article>
           <article className="ff-cap-card">
             <span className="ff-cap-card__icon" aria-hidden>
               ⟡
             </span>
-            <h3>Runtime propagation</h3>
-            <p>
-              Step through simulations with packet-style edge payloads, decline paths, and
-              per-node state — like tracing packets through infrastructure.
-            </p>
+            <h3>{t('home.capRuntimeTitle')}</h3>
+            <p>{t('home.capRuntimeBody')}</p>
           </article>
           <article className="ff-cap-card">
             <span className="ff-cap-card__icon" aria-hidden>
               ⬡
             </span>
-            <h3>Node inspection</h3>
-            <p>
-              Enterprise-grade inspectors for integration settings, retries, fees, routing,
-              webhooks, and execution history on every financial node.
-            </p>
+            <h3>{t('home.capInspectorTitle')}</h3>
+            <p>{t('home.capInspectorBody')}</p>
           </article>
         </section>
 
         <section id="scenarios" className="ff-home__scenarios" aria-labelledby="scenarios-heading">
           <header className="ff-home__section-head">
-            <h2 id="scenarios-heading">Flow templates</h2>
-            <p>
-              {SCENARIOS.length} enterprise templates · launch topology simulations with live
-              runtime propagation
-            </p>
+            <h2 id="scenarios-heading">{t('home.scenariosTitle')}</h2>
+            <p>{t('home.scenariosLead', { count: SCENARIOS.length })}</p>
           </header>
 
           <ul className="ff-home__grid ff-home__grid--templates">
             {SCENARIOS.map((scenario, index) => (
-              <li key={scenario.id}>
-                <Link
-                  to={`/playground/${scenario.id}`}
-                  className="ff-scenario-card ff-template-card"
-                  style={{ animationDelay: `${index * 60}ms` }}
-                >
-                  <div className="ff-template-card__preview" aria-hidden>
-                    <span className="ff-template-card__pulse" />
-                    <svg viewBox="0 0 120 48" className="ff-template-card__topology">
-                      <path
-                        d="M8 24 H40 M40 24 H72 M72 24 H104"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        opacity="0.45"
-                      />
-                      <circle cx="8" cy="24" r="3.5" fill="currentColor" />
-                      <circle cx="40" cy="24" r="3.5" fill="currentColor" opacity="0.7" />
-                      <circle cx="72" cy="24" r="3.5" fill="currentColor" opacity="0.7" />
-                      <circle cx="104" cy="24" r="3.5" fill="currentColor" />
-                    </svg>
-                  </div>
-                  <div className="ff-scenario-card__top">
-                    <span className="ff-scenario-card__index">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <span className="ff-scenario-card__domain">
-                      {domainLabel(scenario.flow.metadata?.domain)}
-                    </span>
-                  </div>
-                  <h3 className="ff-scenario-card__title">{scenario.title}</h3>
-                  <p className="ff-scenario-card__subtitle">{scenario.subtitle}</p>
-                  <div className="ff-scenario-card__meta">
-                    <span>{countNodes(scenario)} nodes</span>
-                    <span>{scenario.flow.edges.length} edges</span>
-                    <span>Runtime</span>
-                  </div>
-                  <span className="ff-scenario-card__cta">
-                    Run simulation
-                    <span className="ff-scenario-card__arrow" aria-hidden>
-                      →
-                    </span>
-                  </span>
-                </Link>
-              </li>
+              <ScenarioCard key={scenario.id} scenario={scenario} index={index} />
             ))}
           </ul>
         </section>
@@ -185,9 +180,7 @@ export function HomePage() {
 
       <footer className="ff-home__footer">
         <FlowFinLogo size={20} showWordmark wordmarkClassName="ff-home__footer-brand" />
-        <p>
-          Fintech orchestration · payment topology simulation · financial runtime observability
-        </p>
+        <p>{t('home.footer')}</p>
       </footer>
     </div>
   )

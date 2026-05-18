@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { buildCopilotInsights } from '../runtime/copilotInsights'
 import { useGraphStore } from '../stores/useGraphStore'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
 
 export function AiCopilotPanel() {
+  const { t } = useTranslation()
   const flow = useGraphStore((s) => s.flow)
   const phase = useRuntimeStore((s) => s.phase)
   const failureReason = useRuntimeStore((s) => s.failureReason)
@@ -25,11 +27,11 @@ export function AiCopilotPanel() {
   )
 
   return (
-    <section className="ff-copilot" aria-label="AI operations assistant">
+    <section className="ff-copilot" aria-label={t('aria.aiCopilot')}>
       <header className="ff-copilot__head">
-        <span className="ff-copilot__badge">AI Ops</span>
-        <h2>Runtime copilot</h2>
-        <p>Mocked operational intelligence · preview</p>
+        <span className="ff-copilot__badge">{t('copilot.badge')}</span>
+        <h2>{t('copilot.title')}</h2>
+        <p>{t('copilot.subtitle')}</p>
       </header>
       <ul className="ff-copilot__list">
         {insights.map((item) => (

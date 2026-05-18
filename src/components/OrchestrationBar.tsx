@@ -1,34 +1,23 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { FlowFinLogo } from '../brand/FlowFinLogo'
+import { LanguageSwitcher } from './LanguageSwitcher'
 import { PlaygroundTransportButton } from './PlaygroundTransportButton'
 import { RuntimeTimelineControls } from './RuntimeTimelineControls'
 import { SCENARIOS } from '../fdl/scenarios'
+import { phaseLabel, scenarioSubtitle } from '../i18n/helpers'
 import { useGraphStore } from '../stores/useGraphStore'
-import {
-  useRuntimeStore,
-  type SimulationPhase,
-} from '../stores/useRuntimeStore'
+import { useRuntimeStore } from '../stores/useRuntimeStore'
 import { useUiStore } from '../stores/useUiStore'
 
-function phaseLabel(phase: SimulationPhase): string {
-  switch (phase) {
-    case 'idle':
-      return 'Idle'
-    case 'running':
-      return 'Running'
-    case 'paused':
-      return 'Paused'
-    case 'completed':
-      return 'Completed'
-    default:
-      return phase
-  }
-}
-
 export function OrchestrationBar() {
+  const { t } = useTranslation()
   const flow = useGraphStore((s) => s.flow)
   const scenarioId = useGraphStore((s) => s.scenarioId)
-  const scenarioSubtitle = SCENARIOS.find((s) => s.id === scenarioId)?.subtitle
+  const rawSubtitle = SCENARIOS.find((s) => s.id === scenarioId)?.subtitle
+  const scenarioSubtitleText = rawSubtitle
+    ? scenarioSubtitle(t, scenarioId, rawSubtitle)
+    : undefined
   const phase = useRuntimeStore((s) => s.phase)
   const cursor = useRuntimeStore((s) => s.cursor)
   const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
@@ -51,15 +40,18 @@ export function OrchestrationBar() {
           ? 0
           : Math.min(100, Math.round(((cursor + 1) / seqLen) * 100))
 
+  const stepCurrent = cursor < 0 ? '—' : String(cursor + 1)
+  const stepTotal = seqLen ? String(seqLen) : '—'
+
   return (
     <header className="ff-orchestration">
       <div className="ff-orchestration__brand">
-        <Link to="/" className="ff-orchestration__logo" aria-label="FlowFin home">
+        <Link to="/" className="ff-orchestration__logo" aria-label={t('aria.home')}>
           <FlowFinLogo size={22} wordmarkClassName="ff-orchestration__logo-text" />
         </Link>
         <span className="ff-orchestration__flow-name">{flow.name}</span>
-        {scenarioSubtitle ? (
-          <span className="ff-orchestration__subtitle">{scenarioSubtitle}</span>
+        {scenarioSubtitleText ? (
+          <span className="ff-orchestration__subtitle">{scenarioSubtitleText}</span>
         ) : null}
         {activeCase?.context ? (
           <span className="ff-orchestration__context">{activeCase.context}</span>
@@ -67,9 +59,9 @@ export function OrchestrationBar() {
       </div>
 
       <div className="ff-orchestration__status">
-        <span className={`ff-pill ff-pill--${phase}`}>{phaseLabel(phase)}</span>
+        <span className={`ff-pill ff-pill--${phase}`}>{phaseLabel(t, phase)}</span>
         <span className="ff-orchestration__meta">
-          Step {cursor < 0 ? '—' : cursor + 1} / {seqLen || '—'}
+          {t('common.stepProgress', { current: stepCurrent, total: stepTotal })}
         </span>
       </div>
 
@@ -81,8 +73,9 @@ export function OrchestrationBar() {
         <PlaygroundTransportButton variant="hero" />
         <RuntimeTimelineControls />
         <div className="ff-orchestration__controls-secondary">
+          <LanguageSwitcher />
           <label className="ff-speed">
-            <span>Speed</span>
+            <span>{t('common.speed')}</span>
             <select
               value={String(speedMultiplier)}
               onChange={(e) => setSpeedMultiplier(Number(e.target.value))}
@@ -94,10 +87,10 @@ export function OrchestrationBar() {
             </select>
           </label>
           <button type="button" className="ff-btn ff-btn--ghost" onClick={() => reset()}>
-            Reset
+            {t('common.reset')}
           </button>
           <button type="button" className="ff-btn ff-btn--ghost" onClick={() => stepForward()}>
-            Step
+            {t('common.step')}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
-import { playgroundMeta } from '../brand/site'
+import { useTranslation } from 'react-i18next'
 import { MobilePlaygroundShell } from '../components/mobile/MobilePlaygroundShell'
 import { PageMeta } from '../components/PageMeta'
 import { SkipLink } from '../components/SkipLink'
@@ -9,6 +9,7 @@ import { PlaygroundScenarioStrip } from '../components/PlaygroundScenarioStrip'
 import { RuntimeSidebar } from '../components/RuntimeSidebar'
 import { DEFAULT_SCENARIO_ID, SCENARIOS } from '../fdl/scenarios'
 import { useDeviceClass } from '../hooks/useDeviceClass'
+import { useScenarioDisplay } from '../hooks/useScenarioDisplay'
 import { useRunningLogTicker } from '../hooks/useRunningLogTicker'
 import { useRuntimeEffects } from '../hooks/useRuntimeEffects'
 import { useSimulationTicker } from '../hooks/useSimulationTicker'
@@ -17,6 +18,7 @@ import { useGraphStore } from '../stores/useGraphStore'
 import { useUiStore } from '../stores/useUiStore'
 
 function PlaygroundContent() {
+  const { t } = useTranslation()
   useRunningLogTicker()
   useRuntimeEffects()
   useSimulationTicker()
@@ -33,6 +35,9 @@ function PlaygroundContent() {
   )
 
   const isValid = scenario != null
+  const display = useScenarioDisplay(
+    scenario ?? { id: DEFAULT_SCENARIO_ID, title: '', subtitle: '' },
+  )
 
   const flow = useMemo(() => {
     if (!scenarioId) return SCENARIOS[0]!.flow
@@ -61,7 +66,11 @@ function PlaygroundContent() {
     return <Navigate to="/" replace />
   }
 
-  const meta = playgroundMeta(scenario.id, scenario.title, scenario.subtitle)
+  const meta = {
+    title: t('meta.playgroundTitle', { title: display.title }),
+    description: t('meta.playgroundDescription', { subtitle: display.subtitle }),
+    path: `/playground/${scenario.id}`,
+  }
 
   if (!isDesktop) {
     return (
@@ -81,7 +90,11 @@ function PlaygroundContent() {
       <SkipLink />
       <OrchestrationBar />
       <PlaygroundScenarioStrip />
-      <main id="main-content" className="ff-main ff-playground__main" aria-label="Runtime topology playground">
+      <main
+        id="main-content"
+        className="ff-main ff-playground__main"
+        aria-label={t('aria.playgroundMain')}
+      >
         <FlowCanvas key={scenarioId} flow={flow} />
         <RuntimeSidebar />
       </main>

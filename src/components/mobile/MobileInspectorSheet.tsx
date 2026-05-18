@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NodeInspectorPanel } from '../NodeInspectorPanel'
 import { useUiStore } from '../../stores/useUiStore'
 
 /** Bottom-sheet node inspector for touch-first companion mode. */
 export function MobileInspectorSheet() {
+  const { t } = useTranslation()
   const selectedNodeId = useUiStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useUiStore((s) => s.setSelectedNodeId)
 
@@ -19,11 +21,11 @@ export function MobileInspectorSheet() {
   if (!selectedNodeId) return null
 
   return (
-    <div className="ff-mobile-sheet" role="dialog" aria-modal="true" aria-label="Node inspector">
+    <div className="ff-mobile-sheet" role="dialog" aria-modal="true" aria-label={t('aria.nodeInspector')}>
       <button
         type="button"
         className="ff-mobile-sheet__backdrop"
-        aria-label="Close inspector"
+        aria-label={t('aria.closeInspector')}
         onClick={() => setSelectedNodeId(null)}
       />
       <div className="ff-mobile-sheet__panel">

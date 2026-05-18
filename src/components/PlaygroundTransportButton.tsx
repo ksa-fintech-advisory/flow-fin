@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   useRuntimeStore,
   type SimulationPhase,
@@ -8,20 +9,34 @@ type PlaygroundTransportButtonProps = {
   variant?: 'hero' | 'dock'
 }
 
-function primaryLabel(phase: SimulationPhase): string {
+function primaryLabel(t: (key: string) => string, phase: SimulationPhase): string {
   switch (phase) {
     case 'running':
-      return 'Pause'
+      return t('transport.pause')
     case 'paused':
-      return 'Resume'
+      return t('transport.resume')
     case 'completed':
-      return 'Play again'
+      return t('transport.playAgain')
     default:
-      return 'Play simulation'
+      return t('transport.play')
+  }
+}
+
+function shortLabel(t: (key: string) => string, phase: SimulationPhase): string {
+  switch (phase) {
+    case 'running':
+      return t('transport.pause')
+    case 'paused':
+      return t('transport.resume')
+    case 'completed':
+      return t('transport.again')
+    default:
+      return t('transport.playShort')
   }
 }
 
 export function PlaygroundTransportButton({ variant = 'hero' }: PlaygroundTransportButtonProps) {
+  const { t } = useTranslation()
   const phase = useRuntimeStore((s) => s.phase)
   const start = useRuntimeStore((s) => s.start)
   const pause = useRuntimeStore((s) => s.pause)
@@ -33,21 +48,20 @@ export function PlaygroundTransportButton({ variant = 'hero' }: PlaygroundTransp
     else start()
   }
 
-  const icon = phase === 'running' ? '❚❚' : phase === 'paused' ? '▶' : '▶'
-  const shortLabel =
-    phase === 'running' ? 'Pause' : phase === 'paused' ? 'Resume' : phase === 'completed' ? 'Again' : 'Play'
+  const icon = phase === 'running' ? '❚❚' : '▶'
+  const label = variant === 'dock' ? shortLabel(t, phase) : primaryLabel(t, phase)
 
   return (
     <button
       type="button"
       className={`ff-btn-play ff-btn-play--${phase} ff-btn-play--${variant}`}
       onClick={onPrimary}
-      aria-label={primaryLabel(phase)}
+      aria-label={primaryLabel(t, phase)}
     >
       <span className="ff-btn-play__icon" aria-hidden>
         {icon}
       </span>
-      <span className="ff-btn-play__label">{variant === 'dock' ? shortLabel : primaryLabel(phase)}</span>
+      <span className="ff-btn-play__label">{label}</span>
     </button>
   )
 }
