@@ -15,6 +15,13 @@ export function TimelinePanel() {
         <p>Operational trace · simulated propagation</p>
       </header>
       <ol className="ff-timeline__list" aria-live="polite">
+        {timeline.length === 0 ? (
+          <li className="ff-timeline__empty">
+            <span className="ff-timeline__empty-pulse" aria-hidden />
+            <p>Runtime idle</p>
+            <span>Start simulation to stream operational events across the topology</span>
+          </li>
+        ) : null}
         {[...timeline].reverse().map((entry) => (
           <li
             key={entry.id}

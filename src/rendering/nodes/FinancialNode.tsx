@@ -3,6 +3,8 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import type { FDLNodeKind, RuntimeNodeState } from '../../fdl/types'
 import { NodeKindIcon } from '../nodeIcons'
 import { NODE_VISUALS } from '../nodeVisuals'
+import { NodeMetricsBadge } from '../NodeMetricsBadge'
+import { useRuntimeStore } from '../../stores/useRuntimeStore'
 import { useUiStore } from '../../stores/useUiStore'
 
 export type FinancialNodeData = {
@@ -21,7 +23,10 @@ export function FinancialNode({ id, data, selected }: NodeProps) {
   const { kind, label, runtimeState, failureMessage } = data as FinancialNodeData
   const visual = NODE_VISUALS[kind]
   const storeSelected = useUiStore((s) => s.selectedNodeId === id)
+  const phase = useRuntimeStore((s) => s.phase)
+  const nodeMetrics = useRuntimeStore((s) => s.nodeMetrics[id])
   const isSelected = selected || storeSelected
+  const showMetrics = phase !== 'idle' || runtimeState !== 'idle'
 
   const isStart = kind === 'start'
   const isEnd = kind === 'end'
@@ -137,6 +142,7 @@ export function FinancialNode({ id, data, selected }: NodeProps) {
     >
       {showPulse ? <span className="ff-node__pulse-ring" aria-hidden /> : null}
       {isSelected ? <span className="ff-node__selection-halo" aria-hidden /> : null}
+      <NodeMetricsBadge metrics={nodeMetrics} visible={showMetrics} />
       <span
         className={`ff-node__health ff-node__health--${healthTone}`}
         title={`Runtime: ${runtimeState}`}

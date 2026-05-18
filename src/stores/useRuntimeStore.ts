@@ -6,6 +6,15 @@ import type {
   SimulationCase,
 } from '../fdl/types'
 import { detectBackwardEdges } from '../layout/applyElkLayout'
+import { deriveNodeMetrics } from '../runtime/metrics'
+import { defaultTransitPayload, parseEdgePayloadLabel } from '../runtime/payloads'
+import type {
+  NodeOperationalMetrics,
+  PropagationTrail,
+  RuntimeSnapshot,
+  TransitPacket,
+} from '../runtime/runtimeTypes'
+import { shouldEmitRetrySignal } from '../runtime/variability'
 import {
   completeLogsForKind,
   enterLogsForKind,
@@ -37,39 +46,19 @@ interface RuntimeStore {
   cursor: number
   nodeStates: Record<string, RuntimeNodeState>
   activeEdgeIds: string[]
-  /**
-   * Cumulative set of edge IDs that have carried failure/decline signals.
-   * Edges stay in this list after traversal so they remain visually red.
-   */
   failedEdgeIds: string[]
-  /**
-   * Response edges that successfully carried an approval/settlement signal.
-   * Stays visible after traversal (green operational path).
-   */
   succeededEdgeIds: string[]
-  /**
-   * The active failure reason (set when a node fails).
-   * Carried on edge labels during decline propagation.
-   */
   failureReason: string | null
-  /**
-   * Per-node failure messages. Shown on the node and in the timeline
-   * during decline propagation.
-   */
   nodeFailureMessages: Record<string, string>
-  /**
-   * Active edge payload labels. Shows the "packet" data traveling along
-   * each active edge during simulation, like Packet Tracer.
-   */
   activeEdgePayloads: Record<string, string>
+  propagationTrails: PropagationTrail[]
+  transitPackets: TransitPacket[]
+  nodeMetrics: Record<string, NodeOperationalMetrics>
+  stepSnapshots: RuntimeSnapshot[]
   timeline: TimelineEntry[]
-  /** Per-node operational log stream (mock runtime). */
   nodeLogs: Record<string, RuntimeLogEntry[]>
-  /** Per-node timing and retry metadata for the inspector. */
   nodeTiming: Record<string, NodeRuntimeTiming>
-  /** Tick counter per running node for rotating in-flight logs. */
   runningLogTicks: Record<string, number>
-  /** Currently selected simulation case id */
   activeCaseId: string | null
 
   appendNodeLogs: (nodeId: string, entries: RuntimeLogEntry[]) => void
@@ -79,13 +68,20 @@ interface RuntimeStore {
   start: () => void
   pause: () => void
   resume: () => void
+  replay: () => void
   stepForward: () => void
   advanceStep: () => void
+  seekToStep: (stepIndex: number) => void
   selectCase: (caseId: string) => void
+  decayTrails: () => void
+  tickPackets: () => void
+  maybeSpawnConcurrentPacket: () => void
+  captureSnapshot: () => void
 }
 
 let boundFlow: FlowDefinition | null = null
 let responseEdgeIds: Set<string> = new Set()
+let packetCounter = 0
 
 function getActiveCase(flow: FlowDefinition, caseId: string | null): SimulationCase | null {
   const cases = flow.simulation?.cases
@@ -119,56 +115,60 @@ function timelineCopyForKind(
 ): { title: string; detail?: string } {
   if (isFailed) {
     switch (kind) {
-      case 'fraud_check': return { title: 'Check declined', detail: failureMessage ?? `${label} flagged or blocked` }
-      case 'payment': return { title: 'Payment declined', detail: failureMessage ?? `${label} rejected` }
-      case 'end': return { title: 'Flow ended — declined', detail: failureMessage ?? label }
-      default: return { title: 'Step failed', detail: failureMessage ?? label }
+      case 'fraud_check':
+        return { title: 'Check declined', detail: failureMessage ?? `${label} flagged or blocked` }
+      case 'payment':
+        return { title: 'Payment declined', detail: failureMessage ?? `${label} rejected` }
+      case 'end':
+        return { title: 'Flow ended — declined', detail: failureMessage ?? label }
+      default:
+        return { title: 'Step failed', detail: failureMessage ?? label }
     }
   }
   switch (kind) {
-    case 'start': return { title: 'Runtime entry', detail: `${label} · flow armed` }
-    case 'end': return { title: 'Runtime exit', detail: `${label} · execution closed` }
-    case 'payment': return { title: 'Payment authorized', detail: `${label} accepted payload & risk flags` }
-    case 'fraud_check': return { title: 'Fraud check passed', detail: `${label} cleared velocity & device signals` }
-    case 'approval': return { title: 'Strong customer approval', detail: `${label} completed SCA challenge` }
-    case 'settlement': return { title: 'Settlement posted', detail: `${label} handed off to clearing` }
-    case 'retry': return { title: 'Retry scheduled', detail: `${label} queued with backoff` }
-    case 'routing': return { title: 'Route selected', detail: label }
-    case 'wallet': return { title: 'Wallet updated', detail: label }
-    case 'reconciliation': return { title: 'Reconciliation tick', detail: label }
-    default: return { title: 'Step complete', detail: label }
+    case 'start':
+      return { title: 'Runtime entry', detail: `${label} · flow armed` }
+    case 'end':
+      return { title: 'Runtime exit', detail: `${label} · execution closed` }
+    case 'payment':
+      return { title: 'Payment authorized', detail: `${label} accepted payload & risk flags` }
+    case 'fraud_check':
+      return { title: 'Fraud check passed', detail: `${label} cleared velocity & device signals` }
+    case 'approval':
+      return { title: 'Strong customer approval', detail: `${label} completed SCA challenge` }
+    case 'settlement':
+      return { title: 'Settlement posted', detail: `${label} handed off to clearing` }
+    case 'retry':
+      return { title: 'Retry scheduled', detail: `${label} queued with backoff` }
+    case 'routing':
+      return { title: 'Route selected', detail: label }
+    case 'wallet':
+      return { title: 'Wallet updated', detail: label }
+    case 'reconciliation':
+      return { title: 'Reconciliation tick', detail: label }
+    default:
+      return { title: 'Step complete', detail: label }
   }
 }
 
-const INITIAL_RUNTIME: Pick<
-  RuntimeStore,
-  | 'phase'
-  | 'cursor'
-  | 'nodeStates'
-  | 'activeEdgeIds'
-  | 'failedEdgeIds'
-  | 'succeededEdgeIds'
-  | 'failureReason'
-  | 'nodeFailureMessages'
-  | 'activeEdgePayloads'
-  | 'timeline'
-  | 'nodeLogs'
-  | 'nodeTiming'
-  | 'runningLogTicks'
-> = {
-  phase: 'idle',
+const INITIAL_RUNTIME = {
+  phase: 'idle' as SimulationPhase,
   cursor: -1,
-  nodeStates: {},
-  activeEdgeIds: [],
-  failedEdgeIds: [],
-  succeededEdgeIds: [],
-  failureReason: null,
-  nodeFailureMessages: {},
-  activeEdgePayloads: {},
-  timeline: [],
-  nodeLogs: {},
-  nodeTiming: {},
-  runningLogTicks: {},
+  nodeStates: {} as Record<string, RuntimeNodeState>,
+  activeEdgeIds: [] as string[],
+  failedEdgeIds: [] as string[],
+  succeededEdgeIds: [] as string[],
+  failureReason: null as string | null,
+  nodeFailureMessages: {} as Record<string, string>,
+  activeEdgePayloads: {} as Record<string, string>,
+  propagationTrails: [] as PropagationTrail[],
+  transitPackets: [] as TransitPacket[],
+  nodeMetrics: {} as Record<string, NodeOperationalMetrics>,
+  stepSnapshots: [] as RuntimeSnapshot[],
+  timeline: [] as TimelineEntry[],
+  nodeLogs: {} as Record<string, RuntimeLogEntry[]>,
+  nodeTiming: {} as Record<string, NodeRuntimeTiming>,
+  runningLogTicks: {} as Record<string, number>,
 }
 
 function mergeNodeLogs(
@@ -179,6 +179,50 @@ function mergeNodeLogs(
   if (!entries.length) return existing
   const prev = existing[nodeId] ?? []
   return { ...existing, [nodeId]: [...prev, ...entries].slice(-48) }
+}
+
+function snapshotFromState(state: RuntimeStore): RuntimeSnapshot {
+  return {
+    cursor: state.cursor,
+    phase: state.phase,
+    nodeStates: { ...state.nodeStates },
+    activeEdgeIds: [...state.activeEdgeIds],
+    failedEdgeIds: [...state.failedEdgeIds],
+    succeededEdgeIds: [...state.succeededEdgeIds],
+    failureReason: state.failureReason,
+    nodeFailureMessages: { ...state.nodeFailureMessages },
+    activeEdgePayloads: { ...state.activeEdgePayloads },
+    propagationTrails: state.propagationTrails.map((t) => ({ ...t })),
+    nodeMetrics: { ...state.nodeMetrics },
+  }
+}
+
+function pushTrail(
+  trails: PropagationTrail[],
+  edgeId: string,
+  tone: PropagationTrail['tone'],
+): PropagationTrail[] {
+  const now = Date.now()
+  const next = [
+    ...trails.filter((t) => t.edgeId !== edgeId || t.opacity > 0.15),
+    { id: `${now}-${edgeId}`, edgeId, opacity: 1, tone, createdAt: now },
+  ]
+  return next.slice(-24)
+}
+
+function refreshMetricsForNode(
+  metrics: Record<string, NodeOperationalMetrics>,
+  flow: FlowDefinition,
+  nodeId: string,
+  state: RuntimeNodeState,
+  attempt: number,
+): Record<string, NodeOperationalMetrics> {
+  const node = flow.nodes.find((n) => n.id === nodeId)
+  if (!node) return metrics
+  return {
+    ...metrics,
+    [nodeId]: deriveNodeMetrics(nodeId, node.kind, state, attempt),
+  }
 }
 
 export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
@@ -218,6 +262,69 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     }
   },
 
+  captureSnapshot: () => {
+    set((s) => ({
+      stepSnapshots: [...s.stepSnapshots, snapshotFromState(s)],
+    }))
+  },
+
+  decayTrails: () => {
+    set((s) => {
+      if (!s.propagationTrails.length) return s
+      const next = s.propagationTrails
+        .map((t) => ({ ...t, opacity: t.opacity * 0.92 }))
+        .filter((t) => t.opacity > 0.06)
+      return next.length === s.propagationTrails.length &&
+        next.every((t, i) => t.opacity === s.propagationTrails[i]!.opacity)
+        ? s
+        : { propagationTrails: next }
+    })
+  },
+
+  tickPackets: () => {
+    set((s) => {
+      if (!s.transitPackets.length) return s
+      const speed = 0.045
+      const next = s.transitPackets
+        .map((p) => ({ ...p, progress: p.progress + speed }))
+        .filter((p) => p.progress < 1.05)
+      return { transitPackets: next }
+    })
+  },
+
+  maybeSpawnConcurrentPacket: () => {
+    const flow = boundFlow
+    if (!flow || get().phase !== 'running') return
+    const { cursor, activeCaseId, transitPackets, failureReason } = get()
+    if (transitPackets.length >= 5) return
+
+    const seq = getSequence(flow, activeCaseId)
+    if (cursor < 1 || cursor >= seq.length) return
+
+    const sources = seq.slice(Math.max(0, cursor - 2), cursor + 1)
+    for (let i = 0; i < sources.length - 1; i++) {
+      const eid = edgeBetween(flow, sources[i]!, sources[i + 1]!)
+      if (!eid) continue
+      packetCounter += 1
+      const payload = defaultTransitPayload(cursor + packetCounter)
+      const tone = failureReason ? 'warn' : 'neutral'
+      set((s) => ({
+        transitPackets: [
+          ...s.transitPackets,
+          {
+            id: `tx-${packetCounter}`,
+            edgeId: eid,
+            progress: 0,
+            payload,
+            tone,
+            label: `${payload.currency} ${payload.amount}`,
+          },
+        ],
+      }))
+      return
+    }
+  },
+
   selectCase: (caseId) => {
     set({ activeCaseId: caseId })
     get().reset()
@@ -232,7 +339,6 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         target: e.target,
       })),
     )
-    // Auto-select the first case if available
     const cases = flow.simulation?.cases
     set({ activeCaseId: cases?.[0]?.id ?? null })
     get().reset()
@@ -241,10 +347,19 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
   reset: () => {
     const flow = boundFlow
     const nodeStates: Record<string, RuntimeNodeState> = {}
+    const nodeMetrics: Record<string, NodeOperationalMetrics> = {}
     if (flow) {
-      for (const n of flow.nodes) nodeStates[n.id] = 'idle'
+      for (const n of flow.nodes) {
+        nodeStates[n.id] = 'idle'
+        nodeMetrics[n.id] = deriveNodeMetrics(n.id, n.kind, 'idle', 1)
+      }
     }
-    set({ ...INITIAL_RUNTIME, nodeStates })
+    set({
+      ...INITIAL_RUNTIME,
+      nodeStates,
+      nodeMetrics,
+      activeCaseId: get().activeCaseId,
+    })
   },
 
   start: () => {
@@ -253,7 +368,17 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     const seq = getSequence(flow, get().activeCaseId)
     if (!seq.length) return
     get().reset()
-    set({ phase: 'running', cursor: -1 })
+    set({ phase: 'running', cursor: -1, stepSnapshots: [] })
+    get().advanceStep()
+  },
+
+  replay: () => {
+    const flow = boundFlow
+    if (!flow) return
+    const seq = getSequence(flow, get().activeCaseId)
+    if (!seq.length) return
+    get().reset()
+    set({ phase: 'running', cursor: -1, stepSnapshots: [] })
     get().advanceStep()
   },
 
@@ -265,6 +390,21 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     if (get().phase === 'paused') set({ phase: 'running' })
   },
 
+  seekToStep: (stepIndex) => {
+    const snapshots = get().stepSnapshots
+    if (stepIndex < 0) {
+      get().reset()
+      return
+    }
+    const snap = snapshots[stepIndex]
+    if (!snap) return
+    set({
+      ...snap,
+      phase: 'paused',
+      transitPackets: [],
+    })
+  },
+
   stepForward: () => {
     const flow = boundFlow
     if (!flow) return
@@ -273,7 +413,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
     const { phase } = get()
     if (phase === 'idle' || phase === 'completed') {
       get().reset()
-      set({ phase: 'running', cursor: -1 })
+      set({ phase: 'running', cursor: -1, stepSnapshots: [] })
     } else if (phase === 'paused') {
       set({ phase: 'running' })
     }
@@ -305,25 +445,33 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       nodeLogs,
       nodeTiming,
       runningLogTicks,
+      propagationTrails,
+      nodeMetrics,
+      transitPackets,
     } = state
     const now = Date.now()
+    let nextTransitPackets = transitPackets
 
-    // Mark previous step done
     if (cursor >= 0 && cursor < seq.length) {
       const completedId = seq[cursor]
       const finalState = terminalStates[completedId] ?? 'success'
       nodeStates = { ...nodeStates, [completedId]: finalState }
+      nodeMetrics = refreshMetricsForNode(
+        nodeMetrics,
+        flow,
+        completedId,
+        finalState,
+        nodeTiming[completedId]?.attempt ?? 1,
+      )
 
       const isFailed = finalState === 'failed'
       const node = flow.nodes.find((n) => n.id === completedId)
 
-      // When a node fails, activate the failure reason and messages
       if (isFailed && caseFailureReason) {
         failureReason = caseFailureReason
         nodeFailureMessages = { ...nodeFailureMessages, ...caseFailureMessages }
       }
 
-      // If we're in failure propagation and this node has a failure message, record it
       const nodeMsg = failureReason ? caseFailureMessages[completedId] : undefined
 
       const msg = node
@@ -335,7 +483,6 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
           )
         : { title: 'Step complete' }
 
-      // If this node is relaying a failure (not the origin), use a special timeline entry
       const isRelaying = !isFailed && failureReason && nodeMsg
       const tone: TimelineEntry['tone'] = isFailed ? 'error' : isRelaying ? 'warn' : 'success'
       const title = isRelaying ? `Relaying decline` : msg.title
@@ -378,48 +525,67 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         )
         const { [completedId]: _, ...restTicks } = runningLogTicks
         runningLogTicks = restTicks
+
+        if (shouldEmitRetrySignal(cursor, completedId) && !isFailed) {
+          timeline = [
+            ...timeline,
+            {
+              id: `${now}-retry-signal-${completedId}`,
+              at: now + 1,
+              title: 'Transient retry recovered',
+              detail: `${node.label ?? completedId} · backoff cleared`,
+              tone: 'warn',
+              nodeId: completedId,
+            },
+          ]
+        }
       }
 
-      // Sticky decline: mark the inbound edge when a node fails.
       if (isFailed && cursor > 0) {
         const inboundId = edgeBetween(flow, seq[cursor - 1]!, completedId)
-        if (inboundId && !failedEdgeIds.includes(inboundId)) {
-          failedEdgeIds = [...failedEdgeIds, inboundId]
+        if (inboundId) {
+          propagationTrails = pushTrail(propagationTrails, inboundId, 'failed')
+          if (!failedEdgeIds.includes(inboundId)) {
+            failedEdgeIds = [...failedEdgeIds, inboundId]
+          }
         }
       }
     }
 
     cursor += 1
 
-    // End of sequence
     if (cursor >= seq.length) {
-      const hasFailures = Object.keys(terminalStates).length > 0
-      const endDetail = hasFailures
-        ? `End-to-end simulation finished — ${failureReason ?? 'decline path'}`
-        : 'End-to-end simulation finished'
+      get().captureSnapshot()
       set({
         cursor,
         nodeStates,
         activeEdgeIds: [],
         activeEdgePayloads: {},
-        failedEdgeIds, // preserve — keep all red edges visible
-        succeededEdgeIds, // preserve — keep green response path visible
+        failedEdgeIds,
+        succeededEdgeIds,
         failureReason,
         nodeFailureMessages,
         nodeLogs,
         nodeTiming,
         runningLogTicks,
+        propagationTrails,
+        nodeMetrics,
         timeline: [
           ...timeline,
           {
             id: `${now}-done-flow`,
             at: Date.now(),
-            title: hasFailures ? 'Simulation completed — declined' : 'Settlement completed',
-            detail: endDetail,
-            tone: hasFailures ? 'error' : 'success',
+            title: Object.keys(terminalStates).length
+              ? 'Simulation completed — declined'
+              : 'Settlement completed',
+            detail: Object.keys(terminalStates).length
+              ? `End-to-end simulation finished — ${failureReason ?? 'decline path'}`
+              : 'End-to-end simulation finished',
+            tone: Object.keys(terminalStates).length ? 'error' : 'success',
           },
         ],
         phase: 'completed',
+        transitPackets: [],
       })
       return
     }
@@ -430,45 +596,59 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       [nextId]: 'running',
     }
     let activeEdgeIds: string[] = []
-    let newFailedEdgeIds = [...failedEdgeIds] // cumulative — keep previous
+    let newFailedEdgeIds = [...failedEdgeIds]
     let newSucceededEdgeIds = [...succeededEdgeIds]
-    let activeEdgePayloads: Record<string, string> = {}
+    let newActivePayloads: Record<string, string> = {}
     const caseEdgePayloads = simCase?.edgePayloads ?? {}
+    let trailTone: PropagationTrail['tone'] = failureReason ? 'failed' : 'active'
+
     if (cursor > 0) {
       const prevId = seq[cursor - 1]
       const eid = edgeBetween(flow, prevId, nextId)
       if (eid) {
         activeEdgeIds = [eid]
-        // Attach payload data to active edge (like a network packet)
         if (caseEdgePayloads[eid]) {
-          activeEdgePayloads[eid] = caseEdgePayloads[eid]
+          newActivePayloads[eid] = caseEdgePayloads[eid]
         }
-        const anyPriorFailed = seq.slice(0, cursor).some(
-          (nid) => nodeStates[nid] === 'failed',
-        )
+        const anyPriorFailed = seq.slice(0, cursor).some((nid) => nodeStates[nid] === 'failed')
         const inDeclinePath = failureReason !== null || anyPriorFailed
-        // Sticky failure propagation: decline path edges stay red after completion.
+        trailTone = inDeclinePath ? 'failed' : 'active'
+        propagationTrails = pushTrail(propagationTrails, eid, trailTone)
+
+        const parsed = parseEdgePayloadLabel(newActivePayloads[eid])
+        if (parsed) {
+          packetCounter += 1
+          const pkt: TransitPacket = {
+            id: `primary-${packetCounter}`,
+            edgeId: eid,
+            progress: 0,
+            payload: parsed,
+            tone: inDeclinePath ? 'warn' : 'success',
+            label: `${parsed.currency} ${parsed.amount}`,
+          }
+          nextTransitPackets = [pkt, ...nextTransitPackets].slice(0, 6)
+        }
+
         if (inDeclinePath && !newFailedEdgeIds.includes(eid)) {
           newFailedEdgeIds = [...newFailedEdgeIds, eid]
         }
-        // Successful response edges stay green after traversal.
         if (
           !inDeclinePath &&
           responseEdgeIds.has(eid) &&
           !newSucceededEdgeIds.includes(eid)
         ) {
           newSucceededEdgeIds = [...newSucceededEdgeIds, eid]
+          propagationTrails = pushTrail(propagationTrails, eid, 'success')
         }
       }
     }
 
     const node = flow.nodes.find((n) => n.id === nextId)
-
-    // If we're in failure propagation, use the failure message for the entering node
     const isInFailurePropagation = failureReason !== null
-    const enterMsg = isInFailurePropagation && caseFailureMessages[nextId]
-      ? caseFailureMessages[nextId]
-      : undefined
+    const enterMsg =
+      isInFailurePropagation && caseFailureMessages[nextId]
+        ? caseFailureMessages[nextId]
+        : undefined
 
     const runCopy = node
       ? timelineCopyForKind(node.kind, node.label ?? node.id)
@@ -523,6 +703,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         ...nodeTiming,
         [nextId]: { startedAt: now, attempt },
       }
+      nodeMetrics = refreshMetricsForNode(nodeMetrics, flow, nextId, 'running', attempt)
       nodeLogs = mergeNodeLogs(
         nodeLogs,
         nextId,
@@ -538,7 +719,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       cursor,
       nodeStates: nextStates,
       activeEdgeIds,
-      activeEdgePayloads,
+      activeEdgePayloads: newActivePayloads,
       failedEdgeIds: newFailedEdgeIds,
       succeededEdgeIds: newSucceededEdgeIds,
       failureReason,
@@ -546,7 +727,11 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
       nodeLogs,
       nodeTiming,
       runningLogTicks,
+      propagationTrails,
+      nodeMetrics,
+      transitPackets: nextTransitPackets,
       timeline: [...timeline, ...appended],
     })
+    get().captureSnapshot()
   },
 }))

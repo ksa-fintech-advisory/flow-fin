@@ -6,6 +6,7 @@ import {
   roleForKind,
   samplePayloadForKind,
 } from '../fdl/nodeSemantics'
+import { formatMetricPercent } from '../runtime/metrics'
 import { standbyLogsForKind } from '../runtime/mockNodeLogs'
 import { useGraphStore } from '../stores/useGraphStore'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
@@ -119,6 +120,7 @@ export function NodeInspectorPanel() {
   const cursor = useRuntimeStore((s) => s.cursor)
   const nodeLogs = useRuntimeStore((s) => s.nodeLogs)
   const nodeTiming = useRuntimeStore((s) => s.nodeTiming)
+  const nodeMetrics = useRuntimeStore((s) => s.nodeMetrics)
   const failureReason = useRuntimeStore((s) => s.failureReason)
   const nodeFailureMessages = useRuntimeStore((s) => s.nodeFailureMessages)
   const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
@@ -179,6 +181,7 @@ export function NodeInspectorPanel() {
       activePayload,
       stepLabel: cursor < 0 ? '—' : String(cursor + 1),
       timing,
+      metrics: nodeMetrics[node.id],
       nodeFailure,
       isOnDeclinePath,
       failureReason,
@@ -192,6 +195,7 @@ export function NodeInspectorPanel() {
     cursor,
     nodeLogs,
     nodeTiming,
+    nodeMetrics,
     failureReason,
     nodeFailureMessages,
     activeCaseId,
@@ -209,10 +213,10 @@ export function NodeInspectorPanel() {
             </div>
           </div>
         </header>
-        <div className="ff-node-inspector__placeholder">
+        <div className="ff-node-inspector__placeholder ff-node-inspector__placeholder--live">
           <div className="ff-node-inspector__placeholder-rings" aria-hidden />
-          <p>No node selected</p>
-          <span>Click any node on the topology canvas</span>
+          <p>Topology armed</p>
+          <span>Select a node or run simulation to inspect propagation</span>
         </div>
       </aside>
     )
@@ -341,6 +345,42 @@ export function NodeInspectorPanel() {
                 </div>
               </dl>
             </section>
+
+            {context.metrics ? (
+              <section className="ff-detail-section">
+                <h3>Operational metrics</h3>
+                <div className="ff-runtime-metrics">
+                  <div className="ff-runtime-metric">
+                    <span className="ff-runtime-metric__label">Latency</span>
+                    <span className="ff-runtime-metric__value">{context.metrics.latencyMs}ms</span>
+                  </div>
+                  <div className="ff-runtime-metric">
+                    <span className="ff-runtime-metric__label">Retries</span>
+                    <span className="ff-runtime-metric__value">{context.metrics.retries}</span>
+                  </div>
+                  <div className="ff-runtime-metric">
+                    <span className="ff-runtime-metric__label">Success</span>
+                    <span className="ff-runtime-metric__value">
+                      {formatMetricPercent(context.metrics.successRate)}
+                    </span>
+                  </div>
+                  <div className="ff-runtime-metric">
+                    <span className="ff-runtime-metric__label">Queue</span>
+                    <span className="ff-runtime-metric__value">
+                      {formatMetricPercent(context.metrics.queuePressure)}
+                    </span>
+                  </div>
+                  <div className="ff-runtime-metric">
+                    <span className="ff-runtime-metric__label">Fees</span>
+                    <span className="ff-runtime-metric__value">${context.metrics.feeAccumulated}</span>
+                  </div>
+                  <div className="ff-runtime-metric">
+                    <span className="ff-runtime-metric__label">Processing</span>
+                    <span className="ff-runtime-metric__value">{context.metrics.processingMs}ms</span>
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
             {(context.isOnDeclinePath || context.runtimeState === 'retrying') && (
               <section className="ff-detail-section ff-runtime-alert">

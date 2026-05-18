@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FlowFinLogo } from '../brand/FlowFinLogo'
 import { PlaygroundTransportButton } from './PlaygroundTransportButton'
+import { RuntimeTimelineControls } from './RuntimeTimelineControls'
+import { jitterStepDelay, queueDelayBonus } from '../runtime/variability'
 import { SCENARIOS } from '../fdl/scenarios'
 import { useGraphStore } from '../stores/useGraphStore'
 import {
@@ -46,10 +48,28 @@ export function OrchestrationBar() {
   useEffect(() => {
     if (phase !== 'running') return
     const base = flow.simulation?.stepDelayMs ?? 1000
-    const ms = Math.max(120, base / speedMultiplier)
+    const seq =
+      cases?.find((c) => c.id === activeCaseId)?.sequence ??
+      flow.simulation?.sequence ??
+      []
+    const nodeId = cursor >= 0 && cursor < seq.length ? seq[cursor]! : 'start'
+    const jittered = jitterStepDelay(base, Math.max(0, cursor), nodeId)
+    const ms = Math.max(
+      120,
+      (jittered + queueDelayBonus(base, cursor)) / speedMultiplier,
+    )
     const id = window.setInterval(() => advanceStep(), ms)
     return () => window.clearInterval(id)
-  }, [phase, flow.simulation?.stepDelayMs, speedMultiplier, advanceStep])
+  }, [
+    phase,
+    flow.simulation?.stepDelayMs,
+    speedMultiplier,
+    advanceStep,
+    cursor,
+    activeCaseId,
+    cases,
+    flow.simulation?.sequence,
+  ])
 
   const progress =
     phase === 'completed'
@@ -88,6 +108,7 @@ export function OrchestrationBar() {
 
       <div className="ff-orchestration__controls">
         <PlaygroundTransportButton variant="hero" />
+        <RuntimeTimelineControls />
         <div className="ff-orchestration__controls-secondary">
           <label className="ff-speed">
             <span>Speed</span>

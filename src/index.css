@@ -3294,3 +3294,347 @@ body {
   font-size: 12px !important;
   color: #64748b !important;
 }
+
+/* —— Runtime immersion enhancements —— */
+
+.ff-edge-wire--trail {
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.ff-edge-label__metrics {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+
+.ff-packet {
+  position: absolute;
+  pointer-events: none;
+  z-index: 12;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 4px 16px rgba(2, 6, 23, 0.55);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.ff-packet--success {
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+.ff-packet--warn {
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.ff-packet--error {
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.ff-packet__amount {
+  display: block;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.ff-packet__status {
+  display: block;
+  color: #7dd3fc;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.ff-node-metrics {
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-width: 140px;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ff-node-metrics__item {
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(51, 65, 85, 0.65);
+}
+
+.ff-node-metrics__item--warn {
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.ff-domain-cluster {
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+  pointer-events: none;
+}
+
+.ff-domain-cluster__label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.ff-timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ff-timeline-controls__scrub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+  min-width: 200px;
+}
+
+.ff-timeline-controls__scrub input[type='range'] {
+  flex: 1;
+  min-width: 100px;
+  accent-color: #38bdf8;
+}
+
+.ff-timeline-controls__step {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.ff-timeline-controls__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ff-copilot {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.55);
+  background: rgba(8, 12, 22, 0.6);
+}
+
+.ff-copilot__head h2 {
+  margin: 6px 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ff-copilot__head p {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.ff-copilot__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+}
+
+.ff-copilot__list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ff-copilot__item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.ff-copilot__item--warn {
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.ff-copilot__item--critical {
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.ff-copilot__title {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.ff-copilot__detail,
+.ff-copilot__action {
+  margin: 0;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.ff-copilot__action {
+  margin-top: 6px;
+  color: #7dd3fc;
+  font-style: italic;
+}
+
+.ff-theme-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.ff-theme-picker__select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(51, 65, 85, 0.65);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e2e8f0;
+  font-size: 11px;
+}
+
+.ff-runtime-chip__queue {
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.ff-topology-radar {
+  border: 1px solid rgba(56, 189, 248, 0.2) !important;
+}
+
+.ff-flow-editor--ambient .react-flow__background {
+  animation: ff-canvas-breathe 4.5s ease-in-out infinite;
+}
+
+.ff-node-inspector__placeholder--live .ff-node-inspector__placeholder-rings {
+  animation: ff-placeholder-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes ff-placeholder-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.04);
+  }
+}
+
+.ff-timeline__empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: #64748b;
+  list-style: none;
+}
+
+.ff-timeline__empty-pulse {
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: #38bdf8;
+  animation: ff-pulse-dot 1.4s ease infinite;
+}
+
+.ff-template-card__preview {
+  position: relative;
+  height: 56px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  overflow: hidden;
+  color: #38bdf8;
+}
+
+.ff-template-card__topology {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+}
+
+.ff-template-card__pulse {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(56, 189, 248, 0.08),
+    transparent
+  );
+  animation: ff-template-sweep 2.4s ease-in-out infinite;
+}
+
+@keyframes ff-template-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.ff-flow-editor--fintech-neon .react-flow__background {
+  --ff-accent: #22d3ee;
+}
+
+.ff-flow-editor--fintech-neon .ff-edge-wire--active {
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.45));
+}
+
+.ff-flow-editor--enterprise-infra .react-flow__background {
+  color: rgba(71, 85, 105, 0.5) !important;
+}
+
+.ff-flow-editor--runtime-terminal {
+  background: rgba(2, 8, 6, 0.35);
+}
+
+.ff-flow-editor--runtime-terminal .ff-node__card {
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+.ff-playground .ff-sidebar {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.ff-orchestration__controls {
+  flex-wrap: wrap;
+  gap: 10px;
+}

@@ -9,12 +9,14 @@ import { PlaygroundScenarioStrip } from '../components/PlaygroundScenarioStrip'
 import { RuntimeSidebar } from '../components/RuntimeSidebar'
 import { DEFAULT_SCENARIO_ID, SCENARIOS } from '../fdl/scenarios'
 import { useRunningLogTicker } from '../hooks/useRunningLogTicker'
+import { useRuntimeEffects } from '../hooks/useRuntimeEffects'
 import { FlowCanvas } from '../rendering/FlowCanvas'
 import { useGraphStore } from '../stores/useGraphStore'
 import { useUiStore } from '../stores/useUiStore'
 
 function PlaygroundContent() {
   useRunningLogTicker()
+  useRuntimeEffects()
 
   const { scenarioId } = useParams<{ scenarioId: string }>()
   const setScenarioId = useGraphStore((s) => s.setScenarioId)

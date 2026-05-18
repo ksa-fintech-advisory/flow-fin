@@ -124,21 +124,37 @@ export function HomePage() {
 
         <section id="scenarios" className="ff-home__scenarios" aria-labelledby="scenarios-heading">
           <header className="ff-home__section-head">
-            <h2 id="scenarios-heading">Financial topologies</h2>
+            <h2 id="scenarios-heading">Flow templates</h2>
             <p>
-              {SCENARIOS.length} operational scenarios · select a flow to simulate propagation
-              and inspect runtime behavior
+              {SCENARIOS.length} enterprise templates · launch topology simulations with live
+              runtime propagation
             </p>
           </header>
 
-          <ul className="ff-home__grid">
+          <ul className="ff-home__grid ff-home__grid--templates">
             {SCENARIOS.map((scenario, index) => (
               <li key={scenario.id}>
                 <Link
                   to={`/playground/${scenario.id}`}
-                  className="ff-scenario-card"
+                  className="ff-scenario-card ff-template-card"
                   style={{ animationDelay: `${index * 60}ms` }}
                 >
+                  <div className="ff-template-card__preview" aria-hidden>
+                    <span className="ff-template-card__pulse" />
+                    <svg viewBox="0 0 120 48" className="ff-template-card__topology">
+                      <path
+                        d="M8 24 H40 M40 24 H72 M72 24 H104"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        opacity="0.45"
+                      />
+                      <circle cx="8" cy="24" r="3.5" fill="currentColor" />
+                      <circle cx="40" cy="24" r="3.5" fill="currentColor" opacity="0.7" />
+                      <circle cx="72" cy="24" r="3.5" fill="currentColor" opacity="0.7" />
+                      <circle cx="104" cy="24" r="3.5" fill="currentColor" />
+                    </svg>
+                  </div>
                   <div className="ff-scenario-card__top">
                     <span className="ff-scenario-card__index">
                       {String(index + 1).padStart(2, '0')}
@@ -152,9 +168,10 @@ export function HomePage() {
                   <div className="ff-scenario-card__meta">
                     <span>{countNodes(scenario)} nodes</span>
                     <span>{scenario.flow.edges.length} edges</span>
+                    <span>Runtime</span>
                   </div>
                   <span className="ff-scenario-card__cta">
-                    Inspect topology
+                    Run simulation
                     <span className="ff-scenario-card__arrow" aria-hidden>
                       →
                     </span>

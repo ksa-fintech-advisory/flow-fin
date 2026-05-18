@@ -23,14 +23,18 @@ import { FlowFinLogoMark } from '../brand/FlowFinLogo'
 import type { FlowDefinition } from '../fdl/types'
 import { elkBBoxForKind } from '../layout/elkNodeSizes'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
-import { useUiStore } from '../stores/useUiStore'
 import { PlaygroundCaseBar } from '../components/PlaygroundCaseBar'
 import { PlaygroundToolbar } from '../components/PlaygroundToolbar'
+import { TopologyThemePicker } from '../components/TopologyThemePicker'
+import { useUiStore } from '../stores/useUiStore'
 import { ExecutionEdge } from './edges/ExecutionEdge'
+import { buildClusterNodes } from './buildClusterNodes'
+import { PayloadPacketLayer } from './layers/PayloadPacketLayer'
+import { ClusterNode } from './nodes/ClusterNode'
 import { nodeTypes } from './nodeRegistry'
 
 const edgeTypes = { execution: ExecutionEdge } satisfies EdgeTypes
-const flowNodeTypes = nodeTypes satisfies NodeTypes
+const flowNodeTypes = { ...nodeTypes, cluster: ClusterNode } satisfies NodeTypes
 
 function ElkFitView({ layoutVersion }: { layoutVersion: number }) {
   const { fitView } = useReactFlow()
@@ -58,7 +62,11 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
   const activeEdgePayloads = useRuntimeStore((s) => s.activeEdgePayloads)
   const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
   const phase = useRuntimeStore((s) => s.phase)
+  const propagationTrails = useRuntimeStore((s) => s.propagationTrails)
+  const nodeMetrics = useRuntimeStore((s) => s.nodeMetrics)
+  const transitPackets = useRuntimeStore((s) => s.transitPackets)
   const bindFlow = useRuntimeStore((s) => s.bindFlow)
+  const topologyTheme = useUiStore((s) => s.topologyTheme)
 
   const caseEdgePayloads = useMemo(() => {
     const cases = flow.simulation?.cases
@@ -140,7 +148,7 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
   const nodes: Node[] = useMemo(() => {
     if (!elkNodes) return []
     const flowNodeIds = new Set(flow.nodes.map((n) => n.id))
-    return elkNodes
+    const financial = elkNodes
       .filter((node) => flowNodeIds.has(node.id))
       .map((node) => {
       const fn = flow.nodes.find((n) => n.id === node.id)!
@@ -161,10 +169,13 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
           failureMessage: runtimeState === 'failed' || (failureReason && runtimeState === 'success')
             ? failureMessage
             : null,
+          metrics: nodeMetrics[node.id],
         },
       }
     })
-  }, [elkNodes, flow.nodes, nodeStates, selectedNodeId, failureReason, nodeFailureMessages, flow.id])
+    const clusters = buildClusterNodes(flow, financial)
+    return [...clusters, ...financial]
+  }, [elkNodes, flow, nodeStates, selectedNodeId, failureReason, nodeFailureMessages, nodeMetrics])
 
   const edges: Edge[] = useMemo(
     () =>
@@ -175,6 +186,10 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
         const isFailed = failedEdgeIds.includes(e.id)
         const isSucceeded = succeededEdgeIds.includes(e.id)
         const isActive = activeEdgeIds.includes(e.id)
+        const edgeTrails = propagationTrails.filter((t) => t.edgeId === e.id)
+        const trailOpacity = edgeTrails.reduce((max, t) => Math.max(max, t.opacity), 0)
+        const trailTone = edgeTrails[edgeTrails.length - 1]?.tone ?? 'active'
+        const srcMetrics = nodeMetrics[e.source]
         // Edge label priority during simulation:
         // 1. Active edge payload (packet data like "AUTH $1,000.00")
         // 2. Failed edge decline reason ("decline: insufficient balance")
@@ -200,10 +215,31 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
             highlighted: touchesSelection,
             elkPoints: edgeGeometry[e.id]?.points,
             direction: backwardIds.has(e.id) ? 'response' as const : 'forward' as const,
+            trailOpacity,
+            trailTone,
+            edgeMetrics: srcMetrics
+              ? {
+                  latencyMs: srcMetrics.latencyMs,
+                  queuePressure: srcMetrics.queuePressure,
+                }
+              : undefined,
           },
         }
       }),
-    [flow.edges, activeEdgeIds, activeEdgePayloads, caseEdgePayloads, failedEdgeIds, succeededEdgeIds, failureReason, edgeGeometry, selectedNodeId, backwardIds],
+    [
+      flow.edges,
+      activeEdgeIds,
+      activeEdgePayloads,
+      caseEdgePayloads,
+      failedEdgeIds,
+      succeededEdgeIds,
+      failureReason,
+      edgeGeometry,
+      selectedNodeId,
+      backwardIds,
+      propagationTrails,
+      nodeMetrics,
+    ],
   )
 
   const onPaneClick = useCallback(() => {
@@ -225,7 +261,7 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
       ) : (
         <ReactFlow
           key={flow.id}
-          className={`ff-flow-editor ${phase === 'running' ? 'ff-flow-editor--live' : ''}`}
+          className={`ff-flow-editor ff-flow-editor--${topologyTheme} ${phase === 'running' ? 'ff-flow-editor--live' : ''} ${phase === 'idle' ? 'ff-flow-editor--ambient' : ''}`}
           nodes={nodes}
           edges={edges}
           nodeTypes={flowNodeTypes}
@@ -254,16 +290,18 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
             size={1.2}
             color="rgba(51, 65, 85, 0.38)"
           />
+          <PayloadPacketLayer edgeGeometry={edgeGeometry} />
           <Controls
             showInteractive={false}
             className="ff-flow-controls"
             position="bottom-left"
           />
           <MiniMap
-            className="ff-minimap"
+            className="ff-minimap ff-topology-radar"
             pannable
             zoomable
             maskColor="rgba(15, 23, 42, 0.88)"
+            ariaLabel="Topology radar"
             nodeColor={(n) => {
               const state = nodeStates[n.id]
               if (state === 'running') return '#38bdf8'
@@ -280,9 +318,15 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
             />
           </Panel>
           <Panel position="top-right" className="ff-canvas-overlay">
+            <TopologyThemePicker />
             <div className="ff-runtime-chip">
               <span className={`ff-runtime-chip__dot ff-runtime-chip__dot--${phase}`} />
               <span className="ff-runtime-chip__label">{phase}</span>
+              {transitPackets.length > 0 ? (
+                <span className="ff-runtime-chip__queue" title="Concurrent propagations">
+                  {transitPackets.length} in-flight
+                </span>
+              ) : null}
             </div>
             {selectedNodeId ? (
               <span className="ff-canvas-overlay__hint">Inspector open · Esc to clear</span>

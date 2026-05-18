@@ -209,3 +209,41 @@ export function softConnectorPath(points: Point[], _tension?: number): string {
 export function simplifyOrthoWaypoints(pts: Point[]): Point[] {
   return pts
 }
+
+/** Sample a point along a polyline at t ∈ [0, 1]. */
+export function pointAlongPolyline(
+  points: Point[],
+  t: number,
+): { x: number; y: number; angle: number } {
+  if (points.length < 2) {
+    const p = points[0] ?? { x: 0, y: 0 }
+    return { ...p, angle: 0 }
+  }
+
+  const segments: { len: number; p0: Point; p1: Point }[] = []
+  let total = 0
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i]!
+    const p1 = points[i + 1]!
+    const len = Math.hypot(p1.x - p0.x, p1.y - p0.y)
+    segments.push({ len, p0, p1 })
+    total += len
+  }
+
+  if (total < 1) return { ...points[0]!, angle: 0 }
+
+  let dist = Math.max(0, Math.min(1, t)) * total
+  for (const seg of segments) {
+    if (dist <= seg.len || seg === segments[segments.length - 1]) {
+      const ratio = seg.len < 1 ? 0 : dist / seg.len
+      const x = lerp(seg.p0.x, seg.p1.x, ratio)
+      const y = lerp(seg.p0.y, seg.p1.y, ratio)
+      const angle = Math.atan2(seg.p1.y - seg.p0.y, seg.p1.x - seg.p0.x) * (180 / Math.PI)
+      return { x, y, angle }
+    }
+    dist -= seg.len
+  }
+
+  const last = points[points.length - 1]!
+  return { ...last, angle: 0 }
+}

@@ -25,6 +25,10 @@ export type ExecutionEdgeData = {
   elkPoints?: { x: number; y: number }[]
   /** Flow direction: 'forward' (request path) or 'response' (backward/return path) */
   direction?: EdgeDirection
+  /** Fading propagation trail opacity (0–1) */
+  trailOpacity?: number
+  trailTone?: 'active' | 'failed' | 'success'
+  edgeMetrics?: { latencyMs: number; queuePressure: number }
 }
 
 /**
@@ -79,6 +83,9 @@ export function ExecutionEdge({
   const succeeded = Boolean(edgeData?.succeeded)
   const highlighted = Boolean(edgeData?.highlighted) || Boolean(selected)
   const isResponse = direction === 'response'
+  const trailOpacity = edgeData?.trailOpacity ?? 0
+  const trailTone = edgeData?.trailTone ?? 'active'
+  const showTrail = trailOpacity > 0.06 && !active
 
   const markerId = `ff-arrow-${id}`
   const glowId = `ff-glow-${id}`
@@ -213,6 +220,26 @@ export function ExecutionEdge({
         className="ff-edge-hit"
       />
 
+      {/* Propagation trail — fading execution history */}
+      {showTrail ? (
+        <path
+          d={path}
+          fill="none"
+          stroke={
+            trailTone === 'failed'
+              ? 'rgba(248, 113, 113, 0.55)'
+              : trailTone === 'success'
+                ? 'rgba(52, 211, 153, 0.5)'
+                : 'rgba(56, 189, 248, 0.45)'
+          }
+          strokeWidth={4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity={trailOpacity * 0.55}
+          className="ff-edge-wire--trail"
+        />
+      ) : null}
+
       {/* Ambient halo: active edges (blue, green, or red) */}
       {active && (
         <path
@@ -270,6 +297,12 @@ export function ExecutionEdge({
             }}
           >
             {edgeData.label}
+            {edgeData.edgeMetrics && (active || trailOpacity > 0.3) ? (
+              <span className="ff-edge-label__metrics">
+                {edgeData.edgeMetrics.latencyMs}ms · Q
+                {Math.round(edgeData.edgeMetrics.queuePressure * 100)}%
+              </span>
+            ) : null}
           </div>
         </EdgeLabelRenderer>
       ) : null}

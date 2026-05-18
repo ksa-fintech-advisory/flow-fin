@@ -1,3 +1,4 @@
+import { AiCopilotPanel } from './AiCopilotPanel'
 import { NodeInspectorPanel } from './NodeInspectorPanel'
 import { TimelinePanel } from './TimelinePanel'
 
@@ -5,6 +6,7 @@ import { TimelinePanel } from './TimelinePanel'
 export function RuntimeSidebar() {
   return (
     <aside className="ff-sidebar" aria-label="Inspector and event stream">
+      <AiCopilotPanel />
       <NodeInspectorPanel />
       <TimelinePanel />
     </aside>
