@@ -66,20 +66,20 @@
     "risk": "المخاطر"
   },
   "transport": {
-    "play": "تشغيل المحاكاة",
-    "pause": "إيقاف مؤقت",
+    "play": "تشغيل",
+    "pause": "إيقاف",
     "resume": "استئناف",
-    "playAgain": "إعادة التشغيل",
+    "playAgain": "إعادة",
     "again": "إعادة",
     "playShort": "تشغيل"
   },
   "common": {
     "speed": "السرعة",
-    "reset": "إعادة تعيين",
-    "step": "المرحلة",
-    "stepProgress": "المرحلة {{current}} من {{total}}",
-    "timeline": "الخط الزمني",
-    "replay": "إعادة التشغيل",
+    "reset": "إعادة",
+    "step": "خطوة",
+    "stepProgress": "{{current}} / {{total}}",
+    "timeline": "الزمن",
+    "replay": "إعادة",
     "theme": "السمة",
     "nodes": "العقد",
     "edges": "المسارات",
@@ -122,9 +122,9 @@
     "footer": "FlowFin · محاكاة التدفقات المالية · مراقبة الأنظمة التشغيلية"
   },
   "playground": {
-    "whatHappens": "ماذا يحدث",
-    "exampleScenario": "سيناريو تجريبي",
-    "caseBarLabel": "سير العمليات"
+    "whatHappens": "النتائج",
+    "exampleScenario": "مثال",
+    "caseBarLabel": "الحالات"
   },
   "canvas": {
     "loadingTitle": "جارٍ تجهيز الخريطة التشغيلية",

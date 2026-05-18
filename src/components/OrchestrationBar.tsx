@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { FlowFinLogo } from '../brand/FlowFinLogo'
-import { LanguageSwitcher } from './LanguageSwitcher'
 import { PlaygroundTransportButton } from './PlaygroundTransportButton'
 import { RuntimeTimelineControls } from './RuntimeTimelineControls'
 import { SCENARIOS } from '../fdl/scenarios'
@@ -73,7 +72,6 @@ export function OrchestrationBar() {
         <PlaygroundTransportButton variant="hero" />
         <RuntimeTimelineControls />
         <div className="ff-orchestration__controls-secondary">
-          <LanguageSwitcher />
           <label className="ff-speed">
             <span>{t('common.speed')}</span>
             <select

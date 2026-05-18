@@ -15,10 +15,12 @@ import { useRuntimeEffects } from '../hooks/useRuntimeEffects'
 import { useSimulationTicker } from '../hooks/useSimulationTicker'
 import { FlowCanvas } from '../rendering/FlowCanvas'
 import { useGraphStore } from '../stores/useGraphStore'
+import { usePlaygroundEnglishLocale } from '../hooks/usePlaygroundEnglishLocale'
 import { useUiStore } from '../stores/useUiStore'
 
 function PlaygroundContent() {
   const { t } = useTranslation()
+  usePlaygroundEnglishLocale()
   useRunningLogTicker()
   useRuntimeEffects()
   useSimulationTicker()

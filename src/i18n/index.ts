@@ -11,7 +11,7 @@ export type AppLocale = (typeof SUPPORTED_LOCALES)[number]
 
 const STORAGE_KEY = 'flowfin.locale'
 
-function readStoredLocale(): AppLocale | null {
+export function readStoredLocale(): AppLocale | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === 'ar' || stored === 'en') return stored

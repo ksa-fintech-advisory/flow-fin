@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { FlowFinLogo } from '../../brand/FlowFinLogo'
-import { LanguageSwitcher } from '../LanguageSwitcher'
 import { PlaygroundTransportButton } from '../PlaygroundTransportButton'
 import { phaseLabel } from '../../i18n/helpers'
 import { useGraphStore } from '../../stores/useGraphStore'
@@ -29,7 +28,6 @@ export function MobileOrchestrationBar() {
           <FlowFinLogo size={20} wordmarkClassName="ff-mobile-orchestration__wordmark" />
         </Link>
         <div className="ff-mobile-orchestration__status">
-          <LanguageSwitcher />
           <span className={`ff-pill ff-pill--${phase}`}>{phaseLabel(t, phase)}</span>
           {transitPackets.length > 0 ? (
             <span
