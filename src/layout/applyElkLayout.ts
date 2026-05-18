@@ -395,12 +395,10 @@ function routeBackwardEdges(
     // For backward edges (right→left), source is on the right
     const srcRight = nodeRight(sourceNode)
     const srcMidY = nodeMidY(sourceNode)
-    const srcBottom = nodeBottom(sourceNode)
 
     // Target entry point: bottom of target node, then up from lane
     const tgtLeft = nodeLeft(targetNode)
     const tgtMidY = nodeMidY(targetNode)
-    const tgtBottom = nodeBottom(targetNode)
 
     // Stagger exit/entry X columns so vertical lines don't stack
     // Outermost lanes (longest span) exit closest to the node

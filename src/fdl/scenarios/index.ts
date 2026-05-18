@@ -7,13 +7,6 @@ export type ScenarioMeta = {
   flow: FlowDefinition
 }
 
-function spine(
-  steps: string[],
-  stepDelayMs: number,
-): NonNullable<FlowDefinition['simulation']> {
-  return { stepDelayMs, sequence: steps }
-}
-
 /** Build simulation config with multiple named cases */
 function multiCase(
   stepDelayMs: number,
