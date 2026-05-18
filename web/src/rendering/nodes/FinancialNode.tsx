@@ -111,6 +111,16 @@ export function FinancialNode({ id, data, selected }: NodeProps) {
     )
   }
 
+  const showPulse = runtimeState === 'running' || runtimeState === 'retrying'
+  const healthTone =
+    runtimeState === 'failed'
+      ? 'error'
+      : runtimeState === 'success'
+        ? 'ok'
+        : runtimeState === 'running'
+          ? 'active'
+          : 'idle'
+
   return (
     <div
       className={className}
@@ -125,6 +135,13 @@ export function FinancialNode({ id, data, selected }: NodeProps) {
         }
       }}
     >
+      {showPulse ? <span className="ff-node__pulse-ring" aria-hidden /> : null}
+      {isSelected ? <span className="ff-node__selection-halo" aria-hidden /> : null}
+      <span
+        className={`ff-node__health ff-node__health--${healthTone}`}
+        title={`Runtime: ${runtimeState}`}
+        aria-hidden
+      />
       {!isStart ? (
         <Handle
           type="target"

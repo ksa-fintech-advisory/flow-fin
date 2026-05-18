@@ -23,6 +23,7 @@ import type { FlowDefinition } from '../fdl/types'
 import { elkBBoxForKind } from '../layout/elkNodeSizes'
 import { useRuntimeStore } from '../stores/useRuntimeStore'
 import { useUiStore } from '../stores/useUiStore'
+import { PlaygroundToolbar } from '../components/PlaygroundToolbar'
 import { ExecutionEdge } from './edges/ExecutionEdge'
 import { nodeTypes } from './nodeRegistry'
 
@@ -54,6 +55,7 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
   const nodeFailureMessages = useRuntimeStore((s) => s.nodeFailureMessages)
   const activeEdgePayloads = useRuntimeStore((s) => s.activeEdgePayloads)
   const activeCaseId = useRuntimeStore((s) => s.activeCaseId)
+  const phase = useRuntimeStore((s) => s.phase)
   const bindFlow = useRuntimeStore((s) => s.bindFlow)
 
   const caseEdgePayloads = useMemo(() => {
@@ -219,7 +221,7 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
       ) : (
         <ReactFlow
           key={flow.id}
-          className="ff-flow-editor"
+          className={`ff-flow-editor ${phase === 'running' ? 'ff-flow-editor--live' : ''}`}
           nodes={nodes}
           edges={edges}
           nodeTypes={flowNodeTypes}
@@ -244,9 +246,9 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
           <ElkFitView layoutVersion={layoutVersion} />
           <Background
             variant={BackgroundVariant.Dots}
-            gap={24}
-            size={1}
-            color="rgba(51, 65, 85, 0.45)"
+            gap={28}
+            size={1.2}
+            color="rgba(51, 65, 85, 0.38)"
           />
           <Controls
             showInteractive={false}
@@ -257,11 +259,32 @@ function FlowCanvasInner({ flow }: { flow: FlowDefinition }) {
             className="ff-minimap"
             pannable
             zoomable
-            maskColor="rgba(15, 23, 42, 0.82)"
-            nodeColor={() => '#475569'}
+            maskColor="rgba(15, 23, 42, 0.88)"
+            nodeColor={(n) => {
+              const state = nodeStates[n.id]
+              if (state === 'running') return '#38bdf8'
+              if (state === 'success') return '#34d399'
+              if (state === 'failed') return '#f87171'
+              return '#475569'
+            }}
           />
-          <Panel position="top-right" className="ff-canvas-hint">
-            Scroll to zoom · drag canvas to pan
+          <Panel position="top-left" className="ff-canvas-panel">
+            <PlaygroundToolbar
+              nodeCount={flow.nodes.length}
+              edgeCount={flow.edges.length}
+              layoutReady={Boolean(elkNodes)}
+            />
+          </Panel>
+          <Panel position="top-right" className="ff-canvas-overlay">
+            <div className="ff-runtime-chip">
+              <span className={`ff-runtime-chip__dot ff-runtime-chip__dot--${phase}`} />
+              <span className="ff-runtime-chip__label">{phase}</span>
+            </div>
+            {selectedNodeId ? (
+              <span className="ff-canvas-overlay__hint">Inspector open · Esc to clear</span>
+            ) : (
+              <span className="ff-canvas-overlay__hint">Click node to inspect</span>
+            )}
           </Panel>
         </ReactFlow>
       )}

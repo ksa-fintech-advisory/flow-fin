@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useMemo } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { DEFAULT_SCENARIO_ID, SCENARIOS } from '../fdl/scenarios'
 import { FlowCanvas } from '../rendering/FlowCanvas'
@@ -26,6 +26,14 @@ export function PlaygroundPage() {
     useUiStore.getState().setSelectedNodeId(null)
   }, [scenarioId, isValid, setScenarioId])
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') useUiStore.getState().setSelectedNodeId(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   if (!scenarioId) {
     return <Navigate to={`/playground/${DEFAULT_SCENARIO_ID}`} replace />
   }
@@ -35,7 +43,7 @@ export function PlaygroundPage() {
   }
 
   return (
-    <div className="ff-shell">
+    <div className="ff-shell ff-playground">
       <OrchestrationBar />
       <main className="ff-main">
         <FlowCanvas key={scenarioId} flow={flow} />

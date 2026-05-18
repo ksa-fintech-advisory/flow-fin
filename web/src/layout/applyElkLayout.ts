@@ -224,8 +224,8 @@ const LAYOUT_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   /* Very generous breathing room — infrastructure topology */
-  'elk.spacing.nodeNode': '130',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '280',
+  'elk.spacing.nodeNode': '148',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '300',
   'elk.layered.spacing.edgeNodeBetweenLayers': '90',
   /* ORTHOGONAL routing softened at render time */
   'org.eclipse.elk.edgeRouting': 'ORTHOGONAL',

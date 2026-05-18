@@ -6,8 +6,13 @@ export function TimelinePanel() {
   return (
     <aside className="ff-timeline">
       <header className="ff-timeline__head">
-        <h2>Event stream</h2>
-        <p>Operational trace · simulated</p>
+        <div className="ff-timeline__head-row">
+          <h2>Event stream</h2>
+          {timeline.length > 0 ? (
+            <span className="ff-timeline__count">{timeline.length}</span>
+          ) : null}
+        </div>
+        <p>Operational trace · simulated propagation</p>
       </header>
       <ol className="ff-timeline__list" aria-live="polite">
         {[...timeline].reverse().map((entry) => (
